@@ -1,0 +1,7 @@
+[0321/184747.500:INFO:CONSOLE:465] "%c%s color: red; background: yellow; font-size: 24px; تحذير!", source: https://www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.AccountsSignInUi.ar.79zvzGV6_hc.es5.O/am=Kf4GAADoFIFkAIz7_wcAEiCIBtczAWgCkQEAAAAAAAAAQAsAAKQR/d=1/excm=_b,_tp,confirmidentifierview/ed=1/dg=0/wt=2/ujg=1/rs=AOaEmlH3cwb7oH1nvWMNhPOV5Xt4TZb1BQ/dti=1/m=_b,_tp (465)
+[0321/184747.500:INFO:CONSOLE:465] "%c%s font-size: 18px; قد يتيح استخدام وحدة التحكم هذه للمهاجمين انتحال هويتك وسرقة معلوماتك باستخدام عملية هجوم تُعرف باسم Self-XSS.
+لا تدخل أو تلصق رمزًا لا تعرف مضمونه.", source: https://www.gstatic.com/_/mss/boq-identity/_/js/k=boq-identity.AccountsSignInUi.ar.79zvzGV6_hc.es5.O/am=Kf4GAADoFIFkAIz7_wcAEiCIBtczAWgCkQEAAAAAAAAAQAsAAKQR/d=1/excm=_b,_tp,confirmidentifierview/ed=1/dg=0/wt=2/ujg=1/rs=AOaEmlH3cwb7oH1nvWMNhPOV5Xt4TZb1BQ/dti=1/m=_b,_tp (465)
+[0321/184747.694:ERROR:content\public\browser\web_contents_delegate.cc:302] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+[0321/184747.694:ERROR:content\public\browser\web_contents_delegate.cc:302] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+[0321/184747.741:ERROR:content\public\browser\web_contents_delegate.cc:302] WebContentsDelegate::CheckMediaAccessPermission: Not supported.
+[0321/184747.742:ERROR:content\public\browser\web_contents_delegate.cc:302] WebContentsDelegate::CheckMediaAccessPermission: Not supported.

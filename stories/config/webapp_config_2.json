@@ -1,0 +1,601 @@
+{
+  "accounts": [
+    {
+      "username": "abo3abd-f16",
+      "checked": true,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "أبو عمر",
+      "hashtags": "Abu Omar #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #AbuOmar #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "asel.alm",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #asel_alm #Saudi #Snapchat"
+    },
+    {
+      "username": "azizsamily",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "عزيز",
+      "hashtags": "Aziz #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Aziz #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "bo3omar22",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #bo3omar22 #Saudi #Snapchat"
+    },
+    {
+      "username": "d7oomysnap",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "دحومي",
+      "hashtags": "D7oomy #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #D7oomy #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "dary_1256",
+      "checked": false,
+      "avatar": null,
+      "influencer_name": "ضاري الفلاح",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #ضاري_الفلاح #Saudi #Snapchat"
+    },
+    {
+      "username": "dsh_90",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #dsh_90 #Saudi #Snapchat"
+    },
+    {
+      "username": "ffearfful",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "فيرفول",
+      "hashtags": "FearFull #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #FearFull #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "fhu-2",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #fhu-2 #Saudi #Snapchat"
+    },
+    {
+      "username": "ibralomry",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "أبوخليل",
+      "hashtags": "Abu Khalil #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #AbuKhalil #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "iiklo25",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "خلودي 25",
+      "hashtags": "Khloudi #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Khloudi #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "iirakan",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "راكان",
+      "hashtags": "Rakan #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Rakan #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "irayan_gh",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "ريان",
+      "hashtags": "Rayan #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Rayan #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "mjrmgems",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "مجرم قيمز",
+      "hashtags": "MjrmGames #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #MjrmGames #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "mohammed_oden",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "أودين",
+      "hashtags": "Odin #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Odin #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "mosko.2",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #mosko_2 #Saudi #Snapchat"
+    },
+    {
+      "username": "mrfifasa",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "مستر فيفا",
+      "hashtags": "Mr FIFA #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #MrFIFA #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "opiilz",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "أوبلز",
+      "hashtags": "Obles #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Obles #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "powreyad",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #powreyad #Saudi #Snapchat"
+    },
+    {
+      "username": "powr_rob",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "روب",
+      "hashtags": "Rob #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Rob #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "saud_cast",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #saud_cast #Saudi #Snapchat"
+    },
+    {
+      "username": "shongxbong_yt",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "شونق",
+      "hashtags": "Shong #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Shong #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "shxwm",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "أسامه",
+      "hashtags": "Osama #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Osama #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "tehazm",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "عبدالله أزم",
+      "hashtags": "tehazm #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #tehazm #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "thewitty21",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #thewitty21 #Saudi #Snapchat"
+    },
+    {
+      "username": "virussyyy",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "فايروس",
+      "hashtags": "Virus #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Virus #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "banderitax",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "بندريتا",
+      "hashtags": "Banderitax #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Banderitax #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "drb7h",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "دربحه",
+      "hashtags": "Drb7ah #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Drb7ah #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "modeeral3alam",
+      "checked": false,
+      "avatar": null,
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #modeeral3alam #Saudi #Snapchat"
+    },
+    {
+      "username": "snap.topz",
+      "checked": false,
+      "avatar": null,
+      "team": "TU",
+      "influencer_name": "توبز",
+      "hashtags": "Topz #TU",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Topz #Saudi #Snapchat #TU"
+    },
+    {
+      "username": "dummy6",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=dummy6&type=SVG&bitmoji=enable",
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #dummy6 #Saudi #Snapchat"
+    },
+    {
+      "username": "dummy12",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=dummy12&type=SVG&bitmoji=enable",
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #dummy12 #Saudi #Snapchat"
+    },
+    {
+      "username": "teamfalconsgg",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=teamfalconsgg&type=SVG&bitmoji=enable",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #teamfalconsgg #Saudi #Snapchat"
+    },
+    {
+      "username": "poweresports",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=poweresports&type=SVG&bitmoji=enable",
+      "team": "POWER",
+      "influencer_name": "باور الرسمي",
+      "hashtags": "POWER Official #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #POWEROfficial #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "test1",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=test1&type=SVG&bitmoji=enable",
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #test1 #Saudi #Snapchat"
+    },
+    {
+      "username": "test2",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=test2&type=SVG&bitmoji=enable",
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #test2 #Saudi #Snapchat"
+    },
+    {
+      "username": "test3",
+      "checked": false,
+      "avatar": null,
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #test3 #Saudi #Snapchat"
+    },
+    {
+      "username": "test4",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=test4&type=SVG&bitmoji=enable",
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #test4 #Saudi #Snapchat"
+    },
+    {
+      "username": "test5",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=test5&type=SVG&bitmoji=enable",
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #test5 #Saudi #Snapchat"
+    },
+    {
+      "username": "test6",
+      "checked": false,
+      "avatar": "https://app.snapchat.com/web/deeplink/snapcode?username=test6&type=SVG&bitmoji=enable",
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #test6 #Saudi #Snapchat"
+    },
+    {
+      "username": "test7",
+      "checked": false,
+      "avatar": null,
+      "influencer_name": "",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #test7 #Saudi #Snapchat"
+    },
+    {
+      "username": "abo_sa3ad",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "أبو السعد",
+      "hashtags": "Abu Al-Saad #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #AbuAl-Saad #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "fawaz_707",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "فواز",
+      "hashtags": "Fawaz #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Fawaz #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "abuabeer",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "أبو عبير",
+      "hashtags": "Abu Abeer #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #AbuAbeer #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "raed",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "رائد",
+      "hashtags": "Raed #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Raed #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "lily",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "للي",
+      "hashtags": "Lily #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Lily #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "adel",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "عادل",
+      "hashtags": "Adel #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Adel #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "amer",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "عامر",
+      "hashtags": "Amer #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Amer #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "mexic",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "مكسيكي",
+      "hashtags": "Mexic #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Mexic #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "slo7",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "صليح",
+      "hashtags": "Slo7 #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Slo7 #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "hamada",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "حمادة",
+      "hashtags": "Hamada #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Hamada #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "falconsesports",
+      "checked": false,
+      "avatar": null,
+      "team": "Falcons",
+      "influencer_name": "فالكونز الرسمي",
+      "hashtags": "Falcons Official #Falcons",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #FalconsOfficial #Saudi #Snapchat #Falcons"
+    },
+    {
+      "username": "bnouh111",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "أبو نوح",
+      "hashtags": "Abu Nouh #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #AbuNouh #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "yznsaa1",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "يزن",
+      "hashtags": "Yazan #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Yazan #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "abuswe7l",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "أبوسويحل",
+      "hashtags": "Abu Swehl #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #AbuSwehl #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "fares_fu",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "فارس",
+      "hashtags": "Fares #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Fares #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "i3zoooz29",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "كمستكا",
+      "hashtags": "Kmistka #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Kmistka #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "glory19mu",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "جلوري",
+      "hashtags": "Glory #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Glory #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "ieaglee",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "إيغل",
+      "hashtags": "Eagle #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Eagle #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "jaservii",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "جاسر",
+      "hashtags": "Jaser #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Jaser #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "powrnedal",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "نضال",
+      "hashtags": "Nedal #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Nedal #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "ahmedowsari",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "أحمد شو",
+      "hashtags": "AhmedShow #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #AhmedShow #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "ecnnu",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "يزيد",
+      "hashtags": "Yazeed #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Yazeed #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "zeeyadx",
+      "checked": false,
+      "avatar": null,
+      "team": "POWER",
+      "influencer_name": "زياد إكس",
+      "hashtags": "ZiadX #POWER",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #ZiadX #Saudi #Snapchat #POWER"
+    },
+    {
+      "username": "TwisMinds",
+      "checked": false,
+      "avatar": null,
+      "team": "Twisted Minds",
+      "influencer_name": "TwisMinds Official",
+      "hashtags": "TwisMinds #Twisted Minds",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #TwisMinds #Saudi #Snapchat #TwistedMinds"
+    },
+    {
+      "username": "r8esports",
+      "checked": false,
+      "avatar": null,
+      "team": "R8",
+      "influencer_name": "R8 Official",
+      "hashtags": "R8 #R8",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #R8 #Saudi #Snapchat #R8"
+    },
+    {
+      "username": "peaksgg",
+      "checked": false,
+      "avatar": null,
+      "team": "PEAKS",
+      "influencer_name": "PEAKS Official",
+      "hashtags": "PEAKS #PEAKS",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #PEAKS #Saudi #Snapchat #PEAKS"
+    },
+    {
+      "username": "lynxesports",
+      "checked": false,
+      "avatar": null,
+      "team": "LYNX",
+      "influencer_name": "LYNX Official",
+      "hashtags": "LYNX #LYNX",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #LYNX #Saudi #Snapchat #LYNX"
+    },
+    {
+      "username": "bitbot_sa",
+      "checked": false,
+      "avatar": null,
+      "team": "Bitbot",
+      "influencer_name": "Bitbot Official",
+      "hashtags": "Bitbot #Bitbot",
+      "custom_hashtags": "#Shorts #SaudiArabia #Dari #Bitbot #Saudi #Snapchat #Bitbot"
+    }
+  ],
+  "teams_config": {
+    "Falcons": {
+      "hashtags": "#Gaming #Win"
+    },
+    "POWER": {
+      "hashtags": "#باور #السعودية #POWER"
+    },
+    "TU": {
+      "hashtags": "#توبز #السعودية #TU"
+    },
+    "Twisted Minds": {
+      "hashtags": "#TwistedMinds #السعودية"
+    },
+    "R8": {
+      "hashtags": "#R8 #السعودية"
+    },
+    "PEAKS": {
+      "hashtags": "#PEAKS #السعودية"
+    },
+    "LYNX": {
+      "hashtags": "#LYNX #السعودية"
+    },
+    "Bitbot": {
+      "hashtags": "#Bitbot #السعودية"
+    }
+  }
+}
