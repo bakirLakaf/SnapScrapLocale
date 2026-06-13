@@ -1,4 +1,5 @@
-Flask
+# SnapScrap Unified Requirements (2026)
+Flask>=3.1.0
 gunicorn
 beautifulsoup4
 requests
@@ -11,6 +12,13 @@ Flask-Login
 Flask-SQLAlchemy
 Flask-Migrate
 bcrypt
+Flask-WTF==1.2.2
+Flask-Limiter==3.9.0
 
-Flask-WTF==1.2.1
-Flask-Limiter==3.8.0
+# Optional / Build
+pyinstaller
+arabic-reshaper
+python-bidi
+opencv-python
+Pillow
+flask-cors

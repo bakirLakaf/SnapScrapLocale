@@ -4,342 +4,702 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{{ csrf_token }}">
     <title>SnapScrap — تنزيل ورفع Stories</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700;800&family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=1.3">
 </head>
 
-<body>
-    <div class="bg-grid"></div>
+<body dir="rtl">
+    <div class="bg-grid" aria-hidden="true"></div>
+    
     <div class="app-layout">
-        <aside class="app-sidebar">
+        <!-- Sidebar -->
+        <aside class="app-sidebar" aria-label="قائمة الحسابات والإعدادات">
             <header class="sidebar-header">
                 <div class="logo-row-small">
                     <i class="fa-brands fa-snapchat logo-snapchat-small fa-2x"></i>
                     <h2>SnapScrap</h2>
                 </div>
-                <div class="lang-switcher" style="margin-top: 10px;">
-                    <select onchange="window.location.href='/set_lang/'+this.value" class="nice-select"
-                        style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 5px; padding: 5px; outline: none;">
+                <div class="lang-switcher">
+                    <select onchange="window.location.href='/set_lang/'+this.value" class="btn-ghost lang-select" aria-label="تغيير اللغة">
                         <option value="ar" {% if current_lang=='ar' %}selected{% endif %}>العربية</option>
                         <option value="en" {% if current_lang=='en' %}selected{% endif %}>English</option>
                         <option value="fr" {% if current_lang=='fr' %}selected{% endif %}>Français</option>
                     </select>
                 </div>
             </header>
-    </div>
 
-    <div class="sidebar-content">
-        <div class="sidebar-section">
-            <h3>الحسابات المضافة</h3>
-            <div class="accounts-actions-sidebar">
-                <button type="button" id="selectAll" class="btn-link-sm">الكل</button>
-                <button type="button" id="deselectAll" class="btn-link-sm">لا أحد</button>
-            </div>
-            <div class="accounts-list sidebar-list" id="accountsList">
-                {% for a in accounts %}
-                <label class="account-item-sidebar">
-                    <input type="checkbox" class="account-check" data-username="{{ a.username }}" {% if a.checked
-                        %}checked{% endif %}>
-                    <span class="account-name">{{ a.username }}</span>
-                    <button type="button" class="btn-remove-sm" data-username="{{ a.username }}" title="حذف">×</button>
-                </label>
-                {% endfor %}
-                <p class="empty-accounts" id="emptyAccounts" style="display:none">لا توجد حسابات</p>
-            </div>
-        </div>
-
-        <div class="sidebar-footer">
-            <label class="toggle sidebar-toggle-item">
-                <input type="checkbox" id="batchMergeSidebar">
-                <span>دمج تلقائي</span>
-            </label>
-            <button type="button" id="downloadSelected" class="btn btn-primary btn-block">
-                تنزيل المحدد
-            </button>
-            {% if getattr(current_user, 'is_admin', False) %}
-            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-block" style="margin-top:10px;">
-                لوحة الإدارة 👑
-            </a>
-            {% endif %}
-        </div>
-    </div>
-    </aside>
-
-    <main class="app-content">
-        <header class="mobile-header" style="display:none;">
-            <div class="logo-row">
-                <h1>SnapScrap</h1>
-            </div>
-        </header>
-
-        <!-- Stripe Upgrade Banner -->
-        {% if current_user.subscription_tier == 'free' %}
-        <div class="upgrade-banner"
-            style="background: linear-gradient(135deg, #8b5cf6, #d946ef); padding: 18px 24px; border-radius: 16px; margin-bottom: 24px; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 25px rgba(217, 70, 239, 0.2);">
-            <div>
-                <h3 style="margin:0 0 5px 0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
-                    <i class="fa-solid fa-crown" style="color: #fbbf24;"></i> الباقة المجانية
-                </h3>
-                <p style="margin:0; font-size:0.9rem; opacity:0.9;">أنت حالياً تستخدم الباقة المجانية بحد أقصى (2)
-                    حسابات. للوصول لعدد أكبر وجدولة أسرع وجيش API، قم بالترقية للـ Pro.</p>
-            </div>
-            <button onclick="checkoutStripe('pro')"
-                style="background: white; color: #8b5cf6; border: none; padding: 10px 24px; border-radius: 10px; cursor: pointer; font-weight: 700; font-family: 'Tajawal', sans-serif; transition: transform 0.2s;">
-                ترقية إلى Pro
-            </button>
-        </div>
-        <script>
-            function checkoutStripe(tier) {
-                fetch('/api/create-checkout-session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tier: tier })
-                }).then(res => res.json()).then(data => {
-                    if (data.checkout_url) window.location.href = data.checkout_url;
-                    else alert(data.error);
-                }).catch(console.error);
-            }
-        </script>
-        {% endif %}
-
-        <!-- Quick Downloader -->
-        <section class="card" style="margin-bottom: 24px; background: rgba(0,0,0,0.3); border-color: var(--accent);">
-            <div class="card-header">
-                <div class="header-icons">
-                    <span class="icon">⚡</span>
-                    <h2>تنزيل قصة فورياً</h2>
-                </div>
-            </div>
-            <div class="form input-row" style="margin-top: 15px; display:flex;">
-                <input type="text" id="quickDownloadUrl" placeholder="أدخل رابط قصة سناب شات (snapchat.com/t/...)"
-                    style="flex:1;">
-                <button type="button" class="btn btn-primary" id="btnQuickDownload"
-                    style="white-space:nowrap; margin-right: 10px;">
-                    <i class="fa-solid fa-download"></i> تنزيل
-                </button>
-            </div>
-            <p id="quickDownloadStatus" style="margin-top:10px; font-size: 0.9rem;"></p>
-        </section>
-
-        <!-- Add Accounts -->
-        <section class="card accounts-card">
-            <div class="card-header">
-                <div class="header-icons">
-                    <span class="icon">➕</span>
-                    <h2>إضافة حسابات</h2>
-                </div>
-            </div>
-            <form id="addAccountForm" class="form-add-accounts">
-                <div class="input-row">
-                    <input type="text" id="newAccountInput" placeholder="أدخل اسم المستخدم (مثال: dary_1256)">
-                </div>
-                <textarea id="newAccounts" placeholder="أو أضف حسابات متعددة (كل حساب في سطر)" rows="3"
-                    style="display:none"></textarea>
-
-                <div class="add-actions-row">
-                    <button type="submit" id="submitAddBtn" class="btn btn-secondary">إضافة</button>
-                    <button type="button" id="toggleBulkAdd" class="btn-link">إضافة جملة / حساب واحد</button>
-                </div>
-            </form>
-
-            <div class="suggested-section">
-                <div class="suggested-header" id="suggestedHeader" style="cursor: pointer;">
-                    <span id="suggestedToggleIcon">▼</span>
-                    <span>حسابات مقترحة</span>
-                    <button type="button" id="refreshSuggested" class="btn-link btn-refresh" title="تحديث"
-                        style="margin-right: auto;">↻</button>
-                </div>
-                <div class="suggested-list" id="suggestedList"></div>
-                <button type="button" id="addSelectedSuggested" class="btn btn-secondary btn-sm">إضافة
-                    المحدد</button>
-            </div>
-        </section>
-
-        <!-- Quick Download -->
-        <section class="card download-card">
-            <div class="card-header">
-                <h2>تنزيل سريع</h2>
-                <p>دون إضافة للقائمة</p>
-            </div>
-            <form id="downloadForm" class="form">
-                <div class="input-group">
-                    <input type="text" id="username" placeholder="اسم المستخدم">
-                    <label class="toggle">
-                        <input type="checkbox" id="mergeAfter">
-                        <span>دمج بعد التحميل</span>
-                    </label>
-                </div>
-                <button type="submit" class="btn btn-secondary">تنزيل</button>
-            </form>
-        </section>
-
-        <!-- Merge -->
-        <section class="card merge-card">
-            <div class="card-header">
-                <h2>دمج الفيديوهات</h2>
-            </div>
-            <form id="mergeForm" class="form">
-                <div class="input-row">
-                    <input type="text" id="mergeUsername" placeholder="اسم المستخدم">
-                    <input type="date" id="mergeDate">
-                </div>
-                <div class="merge-mode" style="display:none;">
-                    <label class="radio"><input type="radio" name="mergeMode" value="shorts" checked> Shorts</label>
-                </div>
-                <button type="submit" class="btn btn-secondary">دمج</button>
-            </form>
-        </section>
-
-        <!-- Schedule -->
-        <section class="card schedule-card">
-            <div class="card-header">
-                <div class="header-icons">
-                    <span class="icon">⏰</span>
-                    <h2>جدولة</h2>
-                </div>
-            </div>
-            <form id="scheduleForm" class="form">
-                <label class="toggle big">
-                    <input type="checkbox" id="scheduleEnabled" {% if schedule.enabled %}checked{% endif %}>
-                    <span>تفعيل الجدولة اليومية</span>
-                </label>
-                <div class="schedule-time">
-                    <input type="number" id="scheduleHour" min="0" max="23" value="{{ schedule.get('hour', 9) }}">
-                    <span>:</span>
-                    <input type="number" id="scheduleMinute" min="0" max="59" value="{{ schedule.get('minute', 0) }}">
-                </div>
-                <p class="next-run" id="nextRun"></p>
-                <label class="toggle">
-                    <input type="checkbox" id="scheduleMerge" {% if schedule.merge %}checked{% endif %}>
-                    <span>دمج تلقائي</span>
-                </label>
-                <button type="submit" class="btn btn-secondary">حفظ</button>
-            </form>
-        </section>
-
-        <!-- Upload -->
-        <section class="card upload-card highlight">
-            <div class="card-header">
-                <div class="header-icons">
-                    <span class="icon icon-yt">▶</span>
-                    <h2>YouTube Upload</h2>
-                </div>
-            </div>
-            <div class="upload-tabs">
-                <button type="button" class="tab active" data-tab="folder">مجلد</button>
-                <button type="button" class="tab" data-tab="file">ملف</button>
-            </div>
-            <div id="uploadFolder" class="tab-content active">
-                <div class="refresh-row channels-row">
-                    <button type="button" id="refreshMerged" class="btn-link btn-refresh">↻ مجلدات</button>
-                    <span>|</span>
-                    <button type="button" id="refreshChannels" class="btn-link btn-refresh">↻ قنوات</button>
-                    <a href="/youtube/connect" id="addChannel" class="btn-link">+ قناة</a>
-                </div>
-                <div class="channel-select-row">
-                    <select id="uploadChannel">
-                        <option value="">اختر القناة</option>
-                    </select>
-                </div>
-                <p class="youtube-channels" id="youtubeChannels"></p>
-                <form id="uploadForm" class="form">
-                    <div class="input-row">
-                        <select id="uploadUsername">
-                            <option value="">اختر المجلد</option>
-                            <option value="__manual__">يدوي</option>
-                            {% for f in merged_folders %}
-                            <option value="{{ f.username }}" data-date="{{ f.date }}">{{ f.username }} / {{ f.date
-                                }}</option>
-                            {% endfor %}
-                        </select>
-                        <div id="manualUpload" class="manual-row" style="display:none">
-                            <input type="text" id="uploadUsernameManual" placeholder="User">
-                            <input type="text" id="uploadDateManual" placeholder="Date">
+            <div class="sidebar-content">
+                <div class="sidebar-section">
+                    <h3>الحسابات المضافة</h3>
+                    <div class="accounts-actions-sidebar">
+                        <div class="selection-pill-group">
+                            <button type="button" id="selectAll" class="selection-pill" title="تحديد الكل">
+                                <i class="fa-solid fa-check-double"></i> الكل
+                            </button>
+                            <button type="button" id="deselectAll" class="selection-pill" title="إلغاء التحديد">
+                                <i class="fa-solid fa-xmark"></i> لا أحد
+                            </button>
                         </div>
-                        <input type="hidden" id="uploadDate">
-                        <select id="uploadPrivacy">
-                            <option value="private">خاص</option>
-                            <option value="unlisted">غير مدرج</option>
-                            <option value="public">عام</option>
-                        </select>
-                        <select id="uploadType" style="display:none;">
-                            <option value="shorts" selected>Shorts</option>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
+                        <div id="accountsList" style="overflow-y: auto; flex: 1; padding-bottom: 20px;">
+                            <!-- Groups will be rendered here by JS -->
+                            <div class="loading-sidebar">جاري تحميل الحسابات...</div>
+                        </div>
+                        <p class="empty-accounts" id="emptyAccounts" style="display:none">لا توجد حسابات</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-footer">
+                    <label class="toggle sidebar-toggle-item">
+                        <input type="checkbox" id="batchMergeSidebar">
+                        <span>دمج تلقائي</span>
+                    </label>
+                    <button type="button" id="downloadSelected" class="btn btn-primary btn-block">
+                        تنزيل المحدد
+                    </button>
+                    {% if current_user.is_admin %}
+                    <a href="{{ url_for('admin_dashboard') if current_user.is_admin else '#' }}" class="btn btn-secondary btn-block admin-btn">
+                        لوحة الإدارة 👑
+                    </a>
+                    {% endif %}
+                    
+                    <button type="button" id="btnSetupBot" class="btn btn-secondary btn-block btn-bot">
+                        🤖 إعداد روبوت يوتيوب
+                    </button>
+                    
+                    <a href="#" class="btn btn-secondary btn-block btn-stats">
+                        📉 إحصائيات قنواتي
+                    </a>
+                </div>
+            </div>
+        </aside>
+        <!-- Main Content -->
+        <main class="app-content">
+            <div style="height: 3.5rem;"></div> <!-- Luxury Top Spacer -->
+            <!-- 1. Integrated Process -->
+            <header class="mobile-header" style="display:none;">
+                <div class="logo-row">
+                    <h1>SnapScrap</h1>
+                </div>
+            </header>
+
+            
+            <!-- Stripe Upgrade Banner -->
+
+
+            
+
+            <!-- Tabs Navigation -->
+    <div class="tabs-nav">
+        <button class="tab-btn active" data-tab="tab-download">
+            <i class="fas fa-cloud-download-alt"></i>
+            {{ _('تنزيل ودمج') }}
+        </button>
+        <button class="tab-btn" data-tab="tab-youtube">
+            <i class="fab fa-youtube"></i>
+            {{ _('رفع يوتيوب') }}
+        </button>
+        <button class="tab-btn" data-tab="tab-pipeline">
+            <i class="fas fa-magic"></i>
+            {{ _('المسار التلقائي') }}
+        </button>
+        <button class="tab-btn" data-tab="tab-army">
+            <i class="fas fa-users-cog"></i>
+            {{ _('جيش المفاتيح') }}
+        </button>
+        <button class="tab-btn" data-tab="tab-tools">
+            <i class="fas fa-toolbox"></i>
+            {{ _('أدوات إضافية') }}
+        </button>
+        <button class="tab-btn" id="btnTaskHistory" onclick="openHistoryModal()">
+            <i class="fas fa-history"></i>
+            {{ _('سجل العمليات') }}
+        </button>
+    </div>
+
+    <div class="tabs-container">
+        <!-- Tab 1: Download & Merge -->
+        <div class="tab-pane active" id="tab-download">
+            <div class="dashboard-grid">
+            <!-- Quick Downloader -->
+            <section class="card text-center" style="margin-bottom: 24px;">
+                <div class="card-header">
+                    <span class="badge">⚡</span>
+                    <div class="card-header-group">
+                        <h2>تنزيل قصة فورياً</h2>
+                    </div>
+                </div>
+                <div class="form input-row" style="margin-top: 15px; display:flex;">
+                    <input type="text" id="quickDownloadUrl" placeholder="أدخل رابط قصة سناب شات"
+                        style="flex:1;">
+                    <button type="button" class="btn btn-primary" id="btnQuickDownload"
+                        style="white-space:nowrap; margin-right: 10px;">
+                        <i class="fa-solid fa-download"></i> تنزيل
+                    </button>
+                </div>
+                <p id="quickDownloadStatus" style="margin-top:10px; font-size: 0.9rem;"></p>
+            </section>
+
+            <!-- Add Accounts -->
+            <section class="card accounts-card">
+                <div class="card-header">
+                    <span class="badge">➕</span>
+                    <div class="card-header-group">
+                        <h2>إضافة حسابات</h2>
+                    </div>
+                </div>
+                <form id="addAccountForm" class="form-add-accounts">
+                    <div class="input-group">
+                        <div class="input-row">
+                            <label for="newAccountInput">اسم المستخدم</label>
+                            <input type="text" id="newAccountInput" placeholder="مثال: dary_1256">
+                        </div>
+                        <div class="input-row">
+                            <label for="newAccountTeam">الفريق</label>
+                            <select id="newAccountTeam">
+                                <option value="Other">بدون فريق</option>
+                                <option value="Falcons">Falcons</option>
+                                <option value="POWER">POWER</option>
+                                <option value="TU">TU</option>
+                                <option value="PEAKS">PEAKS</option>
+                                <option value="LYNX">LYNX</option>
+                                <option value="Twisted Minds">Twisted Minds</option>
+                                <option value="R8">R8</option>
+                                <option value="Bitbot">Bitbot</option>
+                            </select>
+                        </div>
+                    </div>
+                    <textarea id="newAccounts" class="premium-textarea" placeholder="أو أضف حسابات متعددة" rows="3" style="display:none"></textarea>
+
+                    <div class="add-actions-row">
+                        <button type="submit" id="submitAddBtn" class="btn btn-secondary">إضافة</button>
+                        <button type="button" id="toggleBulkAdd" class="btn-link">إضافة جملة / حساب واحد</button>
+                    </div>
+                </form>
+
+                <div class="suggested-section">
+                    <div class="suggested-header" id="suggestedHeader">
+                        <i class="fa-solid fa-chevron-down" id="suggestedToggleIcon"></i>
+                        <span>حسابات مقترحة </span>
+                        <button type="button" id="refreshSuggested" class="btn-ghost btn-refresh" title="تحديث"><i class="fa-solid fa-rotate"></i></button>
+                    </div>
+                    <div class="suggested-list" id="suggestedList"></div>
+                    <button type="button" id="addSelectedSuggested" class="btn btn-secondary btn-block">
+                        <i class="fa-solid fa-plus-circle"></i> إضافة المحدد للجيش
+                    </button>
+                </div>
+            </section>
+
+            <!-- Quick Download -->
+            <section class="card download-card text-center">
+                <div class="card-header">
+                    <span class="badge">📥</span>
+                    <div class="card-header-group">
+                        <h2>تنزيل سريع</h2>
+                    </div>
+                </div>
+                <form id="downloadForm" class="form">
+                    <div class="input-row">
+                        <label for="username">اسم المستخدم</label>
+                        <input type="text" id="username" placeholder="snap_username">
+                    </div>
+                    <div class="input-row">
+                        <label class="toggle">
+                            <input type="checkbox" id="mergeAfter">
+                            <span>دمج تلقائي بعد التحميل</span>
+                        </label>
+                    </div>
+                    <div class="input-row">
+                        <label class="toggle">
+                            <input type="checkbox" id="dlTodayOnly">
+                            <span>تحميل ستوريات اليوم فقط</span>
+                        </label>
+                    </div>
+                    <div class="input-row">
+                        <textarea id="dlCustomLinks" class="premium-textarea" placeholder="روابط مخصصة إضافية/سبوتلايت (اختياري، مفصولة بفاصلة أو أسطر)" rows="2"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fa-solid fa-download"></i> تنزيل الآن
+                    </button>
+                </form>
+            </section>
+            </div> <!-- End Grid -->
+        </div> <!-- End Tab Download -->
+
+        <!-- Tab 2: YouTube Upload -->
+        <div class="tab-pane" id="tab-youtube">
+            <div class="dashboard-grid">
+
+            <!-- Merge -->
+            <section class="card merge-card text-center">
+                <div class="card-header">
+                    <span class="badge">🎬</span>
+                    <div class="card-header-group">
+                        <h2>دمج الفيديوهات</h2>
+                    </div>
+                </div>
+                <form id="mergeForm" class="form">
+                    <div class="input-row">
+                        <label for="mergeUsername">اسم المستخدم</label>
+                        <input type="text" id="mergeUsername" placeholder="snap_username">
+                    </div>
+                    <div class="input-row">
+                        <label for="mergeDate">تاريخ السنابات</label>
+                        <input type="date" id="mergeDate" class="premium-date">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fa-solid fa-layer-group"></i> دمج المقاطع
+                    </button>
+                </form>
+            </section>
+
+            <!-- Schedule -->
+            <section class="card schedule-card text-center">
+                <div class="card-header">
+                    <span class="badge">⏰</span>
+                    <div class="card-header-group">
+                        <h2>جدولة</h2>
+                    </div>
+                </div>
+                <form id="scheduleForm" class="form">
+                    <div class="input-row">
+                        <label class="toggle big-toggle">
+                            <input type="checkbox" id="scheduleEnabled" {% if schedule.enabled %}checked{% endif %}>
+                            <span>تنشيط الجدولة اليومية التلقائية</span>
+                        </label>
+                    </div>
+                    <div class="input-row">
+                        <label>وقت التنفيذ المفضّل</label>
+                            <input type="number" id="scheduleMinute" min="0" max="59" value="{{ schedule.get('minute', 0) }}">
+                        </div>
+                    </div>
+                    <div class="input-row">
+                        <label class="toggle">
+                            <input type="checkbox" id="scheduleMerge" {% if schedule.merge %}checked{% endif %}>
+                            <span>دمج السنابات تلقائياً قبل الرفع</span>
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-premium-yellow btn-block">حفظ الإعدادات الفنية</button>
+                    <p class="next-run" id="nextRun"></p>
+                </form>
+            </section>
+
+
+            <!-- Unified YouTube Upload Section -->
+            <section id="section-upload" class="card upload-card highlight text-center">
+                <div class="card-header">
+                    <span class="badge">▶</span>
+                    <div class="card-header-group">
+                        <h2>إدارة رفع اليوتيوب</h2>
+                        <p>رفع المقاطع المدمجة، الملفات اليدوية، أو الرفع الشامل</p>
+                    </div>
+                </div>
+                
+                <div class="tabs-header" style="margin-bottom: 2rem; justify-content: center; gap: 1rem;">
+                    <button type="button" class="tab active" data-tab="folder">📁 مجلد</button>
+                    <button type="button" class="tab" data-tab="file">📄 ملف</button>
+                    <button type="button" class="tab" data-tab="bulk">📦 الرفع الشامل</button>
+                </div>
+
+                <!-- Mode 1: Folder -->
+                <div id="uploadFolder" class="tab-content active">
+                    <div class="refresh-group justify-center" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <button type="button" id="refreshMerged" class="btn-refresh">
+                            <i class="fa-solid fa-rotate"></i> تحديث المجلدات
+                        </button>
+                        <button type="button" id="refreshChannels" class="btn-refresh">
+                            <i class="fa-solid fa-rotate"></i> تحديث القنوات
+                        </button>
+                        <a href="/youtube/connect" id="addChannel" class="btn btn-secondary btn-sm" style="text-decoration:none;">
+                            <i class="fa-solid fa-plus-circle"></i> إضافة قناة
+                        </a>
+                    </div>
+
+                    <div class="channel-select-row">
+                        <select id="uploadChannel">
+                            <option value="">اختر القناة</option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-accent">رفع المحدد</button>
-                </form>
-            </div>
-            <div id="uploadFile" class="tab-content">
-                <form id="uploadFileForm" class="form">
-                    <div class="file-drop" id="fileDrop">
-                        <input type="file" id="videoFile" accept="video/*" hidden>
-                        <p class="file-drop-text">اسحب ملف هنا</p>
-                        <p class="file-selected" id="fileSelected" style="display:none"></p>
+                    <p class="youtube-channels" id="youtubeChannels"></p>
+                    
+                    <form id="uploadForm" class="form">
+                        <div class="input-row">
+                            <select id="uploadUsername">
+                                <option value="">اختر المجلد</option>
+                                <option value="__manual__">يدوي</option>
+                                {% for f in merged_folders %}
+                                <option value="{{ f.username }}" data-date="{{ f.date }}">{{ f.username }} / {{ f.date }}</option>
+                                {% endfor %}
+                            </select>
+                            <div id="manualUpload" class="manual-row" style="display:none">
+                                <input type="text" id="uploadUsernameManual" placeholder="User">
+                                <input type="text" id="uploadDateManual" placeholder="Date">
+                            </div>
+                            <input type="hidden" id="uploadDate">
+                            <select id="uploadPrivacy">
+                                <option value="private">خاص</option>
+                                <option value="unlisted">غير مدرج</option>
+                                <option value="public" selected>عام</option>
+                            </select>
+                        </div>
+
+                        <div class="input-row" style="margin-top: 15px;">
+                            <input type="text" id="uploadCustomTitle" placeholder="العنوان المخصص (اختياري)" style="flex: 2;">
+                            <div class="thumb-upload-wrapper" style="flex: 1;">
+                                <label for="uploadCustomThumb" class="btn btn-secondary btn-sm" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <i class="fa-solid fa-image"></i> صورة مصغرة
+                                </label>
+                                <input type="file" id="uploadCustomThumb" accept="image/*" hidden onchange="previewSelectedThumbnail(this, 'folderThumbPreview')">
+                            </div>
+                        </div>
+                        <div id="folderThumbPreview" class="thumb-preview-area" style="display: none; margin-top: 10px;">
+                            <img src="" alt="Thumbnail Preview" class="thumb-img-preview">
+                            <button type="button" class="btn-remove-thumb" onclick="removeSelectedThumbnail('uploadCustomThumb', 'folderThumbPreview')">×</button>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button type="submit" class="btn btn-premium-yellow btn-block btn-lg" style="flex: 1;">
+                                <i class="fa-solid fa-bolt"></i> رفع كـ Shorts
+                            </button>
+                            <button type="button" id="btnUploadLong" class="btn btn-secondary btn-block" style="flex: 1;">
+                                <i class="fa-solid fa-film"></i> رفع كـ فيديو طويل
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Mode 2: File -->
+                <div id="uploadFile" class="tab-content">
+                    <form id="uploadFileForm" class="form">
+                        <div class="file-drop" id="fileDrop">
+                            <input type="file" id="videoFile" accept="video/*" hidden>
+                            <p class="file-drop-text">اسحب ملف هنا</p>
+                            <p class="file-selected" id="fileSelected" style="display:none"></p>
+                        </div>
+                        <div class="input-row">
+                            <input type="text" id="uploadTitle" placeholder="العنوان" style="flex: 2;">
+                            <div class="thumb-upload-wrapper" style="flex: 1;">
+                                <label for="uploadFileThumb" class="btn btn-secondary btn-sm" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                    <i class="fa-solid fa-image"></i> صورة مصغرة
+                                </label>
+                                <input type="file" id="uploadFileThumb" accept="image/*" hidden onchange="previewSelectedThumbnail(this, 'fileThumbPreview')">
+                            </div>
+                        </div>
+                        <div id="fileThumbPreview" class="thumb-preview-area" style="display: none; margin-top: 10px; margin-bottom: 10px;">
+                            <img src="" alt="Thumbnail Preview" class="thumb-img-preview">
+                            <button type="button" class="btn-remove-thumb" onclick="removeSelectedThumbnail('uploadFileThumb', 'fileThumbPreview')">×</button>
+                        </div>
+                        <div class="input-row">
+                            <select id="uploadFileChannel" style="flex: 1;">
+                                <option value="">اختر القناة</option>
+                            </select>
+                            <select id="uploadFilePrivacy" style="flex: 1;">
+                                <option value="private">خاص</option>
+                                <option value="unlisted" selected>غير مدرج</option>
+                                <option value="public">عام</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-premium-yellow btn-block btn-lg">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> رفع YouTube الآن
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Mode 3: Bulk (Special) -->
+                <div id="uploadBulk" class="tab-content">
+                    <div class="bulk-info" style="margin-bottom: 2rem; padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                        <p style="color: var(--text-muted); font-size: 0.95rem;">سيقوم النظام بالبحث عن كافة المجلدات الجاهزة ورفعها تِباعاً للقناة المحددة.</p>
                     </div>
-                    <input type="text" id="uploadTitle" placeholder="العنوان">
-                    <select id="uploadFileChannel">
-                        <option value="">اختر القناة</option>
-                    </select>
-                    <select id="uploadFilePrivacy">
-                        <option value="private">خاص</option>
-                        <option value="unlisted">غير مدرج</option>
-                        <option value="public">عام</option>
-                    </select>
-                    <button type="submit" class="btn btn-accent">رفع YouTube</button>
+                    <div class="form">
+                        <div class="input-row">
+                            <select id="bulkUploadChannel">
+                                <option value="">اختر القناة الموحدة</option>
+                            </select>
+                        </div>
+                        <button type="button" id="uploadAll" class="btn btn-premium-yellow btn-block btn-lg">
+                            <i class="fa-solid fa-play"></i> بدء الرفع الشامل لكافة المجلدات 🚀
+                        </button>
+                    </div>
+                </div>
+            </section>
+            </div> <!-- End Grid -->
+        </div> <!-- End Tab YouTube -->
+
+        <!-- Tab 3: Automation & Pipeline -->
+        <div class="tab-pane" id="tab-pipeline">
+            <div class="dashboard-grid">
+
+            
+
+            <!-- Full Pipeline Card -->
+            <section id="section-pipeline" class="card pipeline-card text-center pink-gradient">
+            
+                <div class="card-header">
+                    <span class="badge">🚀</span>
+                    <div class="card-header-group">
+                        <h2>عملية متكاملة</h2>
+                        <p>ينزل السنابات + الدمج + الرفع لليوتيوب + الحذف الآلي</p>
+                    </div>
+                </div>
+                <form id="pipelineForm" class="form">
+                    <div class="input-row">
+                        <label for="pipelineUsername">اختر المستخدم</label>
+                        <select id="pipelineUsername" required></select>
+                    </div>
+                    <div class="input-row">
+                        <label for="pipelineDate">تاريخ السنابات</label>
+                        <input type="date" id="pipelineDate" class="premium-date">
+                    </div>
+                    <div class="input-row">
+                        <label for="pipelineCustomTitle">عنوان مخصص للفيديو الطويل (اختياري)</label>
+                        <input type="text" id="pipelineCustomTitle" class="premium-input" placeholder="مثال: تجميعة {username} بتاريخ {date}">
+                    </div>
+                    <div class="input-row">
+                        <label for="pipelineCustomThumb">صورة مصغرة مخصصة للفيديو الطويل (اختياري)</label>
+                        <input type="file" id="pipelineCustomThumb" class="premium-input" accept="image/*" onchange="previewSelectedThumbnail(this, 'pipelineThumbPreview')">
+                    </div>
+                    <div id="pipelineThumbPreview" class="thumb-preview-area" style="display: none; margin-top: 10px;">
+                        <img src="" alt="Thumbnail Preview" class="thumb-img-preview">
+                        <button type="button" class="btn-remove-thumb" onclick="removeSelectedThumbnail('pipelineCustomThumb', 'pipelineThumbPreview')">×</button>
+                    </div>
+                    <div class="input-row">
+                        <label for="pipelineChannel">قناة الرفع</label>
+                        <select id="pipelineChannel" required></select>
+                    </div>
+                    <div class="input-row">
+                        <label for="pipelinePublishAt">توقيت النشر المجدول</label>
+                        <input type="datetime-local" id="pipelinePublishAt" class="premium-datetime">
+                    </div>
+                    <div class="input-row">
+                        <label class="toggle orange-glow">
+                            <input type="checkbox" id="pipelineForce">
+                            <span>إجبار إعادة التحميل والدمج 🔥</span>
+                        </label>
+                    </div>
+                    <div class="input-row" style="margin-top: 5px;">
+                        <label for="pipelineSkipFirst">تخطي أول سنابات (تجاهل تحميلها)</label>
+                        <input type="number" id="pipelineSkipFirst" class="premium-input" min="0" value="0" placeholder="مثلاً: 2">
+                    </div>
+                    <div class="input-row">
+                        <label class="toggle">
+                            <input type="checkbox" id="pipelineTodayOnly">
+                            <span>تحميل ستوريات اليوم فقط</span>
+                        </label>
+                    </div>
+                    <div class="input-row">
+                        <textarea id="pipelineCustomLinks" class="premium-textarea" placeholder="روابط مخصصة إضافية/سبوتلايت (اختياري، الرابط في كل سطر)" rows="2"></textarea>
+                    </div>
+                    <div class="pipeline-actions">
+                        <button type="button" class="btn btn-accent btn-block btn-lg" onclick="handlePipeline('shorts', this)">
+                            <i class="fa-solid fa-bolt"></i> تشغيل Shorts ⚡
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-block" onclick="handlePipeline('long', this)">
+                            <i class="fa-solid fa-clapperboard"></i> تشغيل فيديو طويل 🎬
+                        </button>
+                        <button type="button" class="btn btn-primary btn-block" onclick="handlePipeline('both', this)">
+                            <i class="fa-solid fa-fire"></i> تشغيل الشامل (الاثنين) 🔥
+                        </button>
+                        <button type="button" class="btn btn-bot btn-block" onclick="handlePipeline('prepare', this)">
+                            <i class="fa-solid fa-box-archive"></i> تحميل ودمج فقط 📦
+                        </button>
+                    </div>
                 </form>
-            </div>
-        </section>
+            </section>
 
-        <!-- YouTube Bulk Upload Card -->
-        <section class="card bulk-card highlight">
-            <div class="card-header">
-                <div class="header-icons">
-                    <span class="icon icon-yt">▶</span>
-                    <h2>رفع الكل (Bulk Upload)</h2>
+            <!-- Batch Pipeline Card -->
+            <section id="section-batch" class="card pipeline-card text-center purple-gradient">
+                <div class="card-header">
+                    <span class="badge">⚡🔥</span>
+                    <div class="card-header-group">
+                        <h2>العملية الشاملة</h2>
+                        <p>تشغيل المسار الكامل لكافة الحسابات المحددة في القائمة الجانبية.</p>
+                    </div>
                 </div>
-                <p>رفع جميع المجلدات الجاهزة وتوزيعها على القنوات</p>
-            </div>
-            <div class="form">
-                <div class="input-row">
-                    <select id="bulkUploadChannel">
-                        <option value="">اختر القناة (مهم: اختر Content Creators Stories)</option>
-                    </select>
+                <div class="form">
+                    <div class="input-row">
+                        <label for="batchPipeChannel">قناة اليوتيوب الموحدة</label>
+                        <select id="batchPipeChannel" required></select>
+                    </div>
+                    <div class="input-row">
+                        <label for="batchPipePublishAt">توقيت النشر المجدول</label>
+                        <input type="datetime-local" id="batchPipePublishAt" class="premium-datetime">
+                    </div>
+                    <div class="input-row">
+                        <label for="batchPipeDate">تاريخ السنابات المراد معالجتها</label>
+                        <input type="date" id="batchPipeDate" class="premium-date">
+                    </div>
+                    <div class="input-row">
+                        <label for="batchPipeCustomTitle">عنوان مخصص للفيديو الطويل (اختياري)</label>
+                        <input type="text" id="batchPipeCustomTitle" class="premium-input" placeholder="مثال: تجميعة {username} بتاريخ {date}">
+                    </div>
+                    <div class="input-row">
+                        <label for="batchPipeCustomThumb">صورة مصغرة مخصصة للكل (اختياري)</label>
+                        <input type="file" id="batchPipeCustomThumb" class="premium-input" accept="image/*" onchange="previewSelectedThumbnail(this, 'batchPipeThumbPreview')">
+                    </div>
+                    <div id="batchPipeThumbPreview" class="thumb-preview-area" style="display: none; margin-top: 10px;">
+                        <img src="" alt="Thumbnail Preview" class="thumb-img-preview">
+                        <button type="button" class="btn-remove-thumb" onclick="removeSelectedThumbnail('batchPipeCustomThumb', 'batchPipeThumbPreview')">×</button>
+                    </div>
+                    <div class="input-row">
+                        <label class="toggle orange-glow">
+                            <input type="checkbox" id="batchPipeForce">
+                            <span>إجبار إعادة التحميل لكافة الحسابات 🔥</span>
+                        </label>
+                    </div>
+                    <div class="input-row" style="margin-top: 5px;">
+                        <label for="batchPipeSkipFirst">تخطي أول سنابات (تجاهل التحميل لكافة الحسابات)</label>
+                        <input type="number" id="batchPipeSkipFirst" class="premium-input" min="0" value="0" placeholder="مثلاً: 2">
+                    </div>
+                    <div class="input-row">
+                        <label class="toggle">
+                            <input type="checkbox" id="batchPipeTodayOnly">
+                            <span>تحميل ستوريات اليوم فقط ⏱️</span>
+                        </label>
+                    </div>
+                    <div class="pipeline-actions">
+                        <button type="button" id="btnBatchPipeline" class="btn btn-accent btn-block btn-lg" onclick="runBatchPipeline('shorts')">
+                            <i class="fa-solid fa-bolt"></i> تشغيل الكل (Shorts) ⚡
+                        </button>
+                        <button type="button" id="btnBatchPipelineLong" class="btn btn-secondary btn-block" onclick="runBatchPipeline('long')">
+                            <i class="fa-solid fa-film"></i> تشغيل الكل (طويل) 🎬
+                        </button>
+                        <button type="button" id="btnBatchPipelineBoth" class="btn btn-primary btn-block" onclick="runBatchPipeline('both')">
+                            <i class="fa-solid fa-fire"></i> العملية الكبرى (الاثنين) 🔥
+                        </button>
+                        <button type="button" id="btnBatchPipelinePrepare" class="btn btn-bot btn-block" onclick="runBatchPipeline('prepare')">
+                            <i class="fa-solid fa-box-archive"></i> دمج وتجهيز الكل فقط 📦
+                        </button>
+                    </div>
                 </div>
-                <button type="button" id="uploadAll" class="btn btn-primary"
-                    style="background-color: var(--yt-red); color: white;">بدء الرفع الشامل</button>
-            </div>
-        </section>
+            </section>
+            </div> <!-- End Grid -->
+        </div> <!-- End Tab Pipeline -->
 
-        <!-- Army of APIs Manager -->
-        <section class="card army-card">
-            <div class="card-header" style="flex-direction: column; align-items: flex-start; gap: 10px;">
-                <div class="header-icons">
-                    <span class="icon" style="color: #fffc00;">🛡️</span>
-                    <h2>إدارة جيش المفاتيح</h2>
+        <!-- Tab 4: Army of APIs -->
+        <div class="tab-pane" id="tab-army">
+            <div class="dashboard-grid">
+
+            <!-- Unified YouTube Army Card -->
+            <section id="section-army" class="card army-card highlight text-center">
+            
+                <div class="card-header" style="justify-content: flex-start; gap: 1.5rem;">
+                    <span class="badge" style="background: none; color: #fffc00; font-size: 2rem;">🛡️</span>
+                    <div class="card-header-group">
+                        <h2 style="font-size: 1.8rem;">جيش قنوات اليوتيوب</h2>
+                        <p class="army-header-desc" style="margin-top: 5px;">جميع المفاتيح فعالة وفي وضع الاستعداد.</p>
+                    </div>
                 </div>
-                <p style="font-size: 0.85rem; color: #a0a0b0; margin:0;">
-                    لن تتوقف الرفوعات أبداً. أضف مفاتيح احتياطية (tokens) لكل قناة، وسيقوم النظام بتدويرها تلقائياً عند
-                    نفاذ الحصة (Quota 403).
-                </p>
-                <button type="button" class="btn btn-secondary btn-sm"
-                    onclick="document.getElementById('secretFileInput').click()" style="margin-top: 10px;">
-                    <i class="fa-solid fa-upload"></i> رفع ملف Client Secret جديد (Google Project)
-                </button>
+                    <div class="army-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('secretFileInput').click()">
+                            <i class="fa-solid fa-upload"></i> رفع Client Secret إضافي
+                        </button>
+                        <button type="button" class="btn btn-sm" onclick="deleteAllTokens()" style="background: rgba; color: #fca5a5; border: 1px solid rgba;">
+                            <i class="fa-solid fa-trash"></i> تصفير الجيش
+                        </button>
+                        <a href="/youtube/connect" class="btn btn-accent btn-sm" style="text-decoration: none;">
+                            <i class="fa-solid fa-plus"></i> تفعيل جندي جديد
+                        </a>
+                        <button type="button" class="btn btn-premium-yellow btn-sm" id="btnBulkConnect">
+                            <i class="fa-solid fa-plug"></i> ربط كافة الجنود ⚡
+                        </button>
+                    </div>
+                </div>
+
+                <div class="army-grid">
+                    {% for soldier in army_soldiers %}
+                    <div class="soldier-card">
+                        <div class="soldier-status-badge {{ 'active' if soldier.is_active else 'idle' }}">
+                            {{ 'نشط' if soldier.is_active else 'انتظار' }}
+                        </div>
+                        
+                        <div class="soldier-main">
+                            <span class="soldier-icon">
+                                <i class="fa-brands fa-youtube"></i>
+                            </span>
+                            <div class="soldier-info">
+                                <strong class="soldier-name" title="{{ soldier.secret_name }}">
+                                    جندي: {{ soldier.secret_name }}
+                                </strong>
+                                <div class="soldier-meta">
+                                    {% if soldier.is_active %}
+                                    <i class="fa-solid fa-check-circle" style="color: var(--success);"></i> جاهز للعمل
+                                    {% else %}
+                                    <i class="fa-solid fa-clock"></i> ينتظر التفعيل
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if not soldier.is_active %}
+                        <div style="margin-top: 1rem; display: flex;">
+                            <a href="/youtube/connect" class="btn btn-secondary btn-sm btn-block" style="text-decoration: none; font-size: 0.75rem;">
+                                <i class="fa-solid fa-link"></i> ربط الآن
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Token Health Monitoring Table -->
+                <div class="token-health-section" style="margin-top: 40px; text-align: right;">
+                    <h3><i class="fa-solid fa-heart-pulse"></i> مراقبة صحة التوكنات (Tokens)</h3>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">إدارة الملفات الفيزيائية والحالة الصحية لكل جندي.</p>
+                    <table class="history-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>اسم الملف</th>
+                                <th>الحالة الصحية</th>
+                                <th>موعد العودة (Cooldown)</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tokenStatusBody">
+                            <tr><td colspan="4" style="text-align:center;">جاري تحميل الحالة...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
                 <form id="secretUploadForm" style="display: none;" enctype="multipart/form-data">
-                    <input type="file" id="secretFileInput" name="secret_file" accept=".json"
-                        onchange="submitSecretUpload()">
+                    <input type="file" id="secretFileInput" accept=".json" multiple onchange="submitSecretUpload()">
                 </form>
+            </section>
                 <script>
+                    async function deleteAllTokens() {
+                        if (!confirm('تحذير: هذا سيحذف جميع المفاتيح (Tokens) و Client Secrets للمشروع بالكامل. هل أنت متأكد؟')) return;
+                        try {
+                            const res = await fetch('/api/youtube/delete_tokens', {
+                                method: 'POST',
+                                headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+                            });
+                            const data = await res.json();
+                            if (data.ok) {
+                                alert(`تم حذف ${data.deleted} ملف توكن بنجاح! سيتم تحديث الصفحة.`);
+                                window.location.reload();
+                            } else {
+                                alert('خطأ أثناء الحذف: ' + data.error);
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            alert('حدث خطأ بالاتصال');
+                        }
+                    }
+
                     function submitSecretUpload() {
                         const fileInput = document.getElementById('secretFileInput');
                         if (!fileInput.files.length) return;
 
                         const formData = new FormData();
-                        formData.append('secret_file', fileInput.files[0]);
+                        for (let i = 0; i < fileInput.files.length; i++) {
+                            formData.append('secret_files', fileInput.files[i]);
+                        }
 
                         fetch('/api/youtube/upload_client_secret', {
                             method: 'POST',
@@ -349,7 +709,8 @@
                             .then(res => res.json())
                             .then(data => {
                                 if (data.ok) {
-                                    alert('تم رفع مشروع جوجل (Client Secret) بنجاح! يمكن للنظام استخدامه في الرفوعات القادمة.');
+                                    alert(`تم رفع ${fileInput.files.length} ملف (Client Secret) بنجاح!`);
+                                    window.location.reload();
                                 } else {
                                     alert('خطأ: ' + (data.error || "تأكد من اختيار ملف صحیح"));
                                 }
@@ -360,161 +721,269 @@
                                 alert('حدث خطأ أثناء الرفع');
                             });
                     }
-                </script>
-            </div>
 
-            <div class="army-list" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
-                {% for channel in youtube_channels %}
-                <div class="army-item"
-                    style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <span style="font-size: 1.5rem; color: #ff0000;"><i class="fa-brands fa-youtube"></i></span>
-                        <div>
-                            <strong style="display: block; font-size: 1rem;">{{ channel.title }}</strong>
-                            <small style="color: #a0a0b0;">{{ channel.id }}</small>
-                        </div>
-                    </div>
+                    function showTokenUpload(channelId) {
+                        document.getElementById('tokenChannelId').value = channelId;
+                        document.getElementById('tokenFileInput').click();
+                    }
 
-                    <div style="display: flex; align-items: center; gap: 15px;">
-                        <div class="token-badge"
-                            style="background: rgba(0, 230, 118, 0.1); color: #00E676; padding: 5px 12px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; border: 1px solid rgba(0, 230, 118, 0.3);">
-                            <i class="fa-solid fa-key"></i> {{ channel.token_count }} مفاتيح احتياطية
-                        </div>
-                        <button type="button" class="btn btn-secondary btn-sm"
-                            onclick="showTokenUpload('{{ channel.id }}')"
-                            style="padding: 6px 12px; font-size: 0.85rem; border-radius: 8px;">
-                            + إضافة مفتاح
-                        </button>
-                    </div>
-                </div>
-                {% else %}
-                <div style="text-align: center; color: #a0a0b0; padding: 20px;">
-                    لا توجد قنوات يوتيوب مرتبطة بعد. قم بإضافة قناة من قائمة الرفع.
-                </div>
-                {% endfor %}
-            </div>
+                    async function submitTokenUpload() {
+                        const fileInput = document.getElementById('tokenFileInput');
+                        if (!fileInput.files || !fileInput.files.length) return;
 
-            <form id="tokenUploadForm" style="display: none;" enctype="multipart/form-data">
-                <input type="hidden" id="tokenChannelId" name="channel_id">
-                <input type="file" id="tokenFileInput" name="token_file" accept=".json" onchange="submitTokenUpload()">
-            </form>
+                        const channelId = document.getElementById('tokenChannelId').value;
+                        let successCount = 0;
+                        let errorCount = 0;
 
-            <script>
-                function showTokenUpload(channelId) {
-                    document.getElementById('tokenChannelId').value = channelId;
-                    document.getElementById('tokenFileInput').click();
-                }
-
-                function submitTokenUpload() {
-                    const fileInput = document.getElementById('tokenFileInput');
-                    if (!fileInput.files.length) return;
-
-                    const formData = new FormData();
-                    formData.append('channel_id', document.getElementById('tokenChannelId').value);
-                    formData.append('token_file', fileInput.files[0]);
-
-                    fetch('/api/youtube/upload_token', {
-                        method: 'POST',
-                        body: formData
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.ok) {
-                                alert('تمت إضافة الجندي (المفتاح) الاحتياطي بنجاح! 🛡️');
-                                window.location.reload();
-                            } else {
-                                alert('خطأ: ' + (data.error || "تأكد من اختيار ملف token.json صحيح"));
+                        for (let i = 0; i < fileInput.files.length; i++) {
+                            const formData = new FormData();
+                            formData.append('channel_id', channelId);
+                            formData.append('token_file', fileInput.files[i]);
+                            try {
+                                const res = await fetch('/api/youtube/upload_token', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                const data = await res.json();
+                                if (data.ok) successCount++;
+                                else errorCount++;
+                            } catch (err) {
+                                console.error(err);
+                                errorCount++;
                             }
-                        })
-                        .catch(err => {
-                            console.error(err);
-                            alert('حدث خطأ أثناء الرفع');
-                        });
-                }
-            </script>
-        </section>
+                        }
 
-        <!-- TikTok -->
-        <section class="card tiktok-card">
-            <div class="card-header">
-                <div class="header-icons">
-                    <span class="icon">📱</span>
-                    <h2>TikTok Upload</h2>
+                        if (errorCount === 0) {
+                            alert(`تمت إضافة ${successCount} جنود احتياطية بنجاح! 🛡️`);
+                        } else {
+                            alert(`تمت إضافة ${successCount} بنجاح، وفشل ${errorCount} مفتاح.`);
+                        }
+
+                        fileInput.value = "";
+                        window.location.reload();
+                    }
+                </script>
+
+            </section>
+            </div> <!-- End Grid -->
+        </div> <!-- End Tab Army -->
+
+        <!-- Tab 5: Additional Tools -->
+        <div class="tab-pane" id="tab-tools">
+            <div class="dashboard-grid">
+
+            <!-- TikTok -->
+            <section class="card tiktok-card text-center" id="section-tiktok">
+                <div class="card-header">
+                    <span class="badge">📱</span>
+                    <div class="card-header-group">
+                        <h2>رفع تيك توك</h2>
+                        <p>مساعد الرفع اليدوي</p>
+                    </div>
                 </div>
-            </div>
-            <div class="tiktok-content">
-                <p class="tiktok-info">مساعد الرفع اليدوي (Manual Bridge)</p>
+                    <div class="form">
+                        <div class="input-row">
+                            <select id="tiktokFolder">
+                                <option value="">اختر المجلد</option>
+                                {% for f in merged_folders %}
+                                <option value="{{ f.username }}" data-date="{{ f.date }}">{{ f.username }} / {{ f.date
+                                    }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="manual-bridge-actions">
+                            <div class="action-step">
+                                <span class="step-num">1</span>
+                                <button type="button" id="copyCaptionBtn" class="btn btn-secondary btn-sm btn-block">نسخ
+                                    العنوان</button>
+                            </div>
+                            <div class="action-step">
+                                <span class="step-num">2</span>
+                                <button type="button" id="openFolderBtn" class="btn btn-secondary btn-sm btn-block">فتح
+                                    المجلد</button>
+                            </div>
+                            <div class="action-step">
+                                <span class="step-num">3</span>
+                                <button type="button" class="btn btn-accent btn-sm btn-block"
+                                    onclick="window.open('https://www.tiktok.com/upload', '_blank')">فتح TikTok</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Clear batch -->
+            <section class="card clear-card">
+                <div class="card-header">
+                    <span class="badge">🧹</span>
+                    <div class="card-header-group">
+                        <h2>تنظيف</h2>
+                        <p>حذف المجلدات بعد الانتهاء</p>
+                    </div>
+                </div>
                 <div class="form">
                     <div class="input-row">
-                        <select id="tiktokFolder">
+                        <select id="clearFolder">
                             <option value="">اختر المجلد</option>
                             {% for f in merged_folders %}
-                            <option value="{{ f.username }}" data-date="{{ f.date }}">{{ f.username }} / {{ f.date
-                                }}</option>
+                            <option value="{{ f.username }}" data-date="{{ f.date }}">{{ f.username }} / {{ f.date }}
+                            </option>
                             {% endfor %}
                         </select>
-                    </div>
-
-                    <div class="manual-bridge-actions">
-                        <div class="action-step">
-                            <span class="step-num">1</span>
-                            <button type="button" id="copyCaptionBtn" class="btn btn-secondary btn-sm btn-block">نسخ
-                                العنوان</button>
-                        </div>
-                        <div class="action-step">
-                            <span class="step-num">2</span>
-                            <button type="button" id="openFolderBtn" class="btn btn-secondary btn-sm btn-block">فتح
-                                المجلد</button>
-                        </div>
-                        <div class="action-step">
-                            <span class="step-num">3</span>
-                            <button type="button" class="btn btn-accent btn-sm btn-block"
-                                onclick="window.open('https://www.tiktok.com/upload', '_blank')">فتح TikTok</button>
-                        </div>
+                        <button type="button" id="clearBatchBtn" class="btn btn-secondary">حذف</button>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+            </div> <!-- End Grid -->
+        </div> <!-- End Tab Tools -->
 
-        <!-- Clear batch -->
-        <section class="card clear-card">
-            <div class="card-header">
-                <h2>تنظيف</h2>
+    </div> <!-- End Tabs Container -->
+
+    <!-- Pipeline Control Modal (Central) -->
+    <div id="pipelineModal" class="pipeline-modal-backdrop" aria-hidden="true">
+        <div class="pipeline-modal-content">
+            <div class="pipeline-modal-header">
+                <h2 id="pipelineModalTitle">جاري تنفيذ العملية...</h2>
+                <button type="button" id="pipelineModalMinimize" class="btn-ghost" title="العمل في الخلفية">
+                    <i class="fa-solid fa-compress"></i> تصغير
+                </button>
             </div>
-            <div class="form">
-                <div class="input-row">
-                    <select id="clearFolder">
-                        <option value="">اختر المجلد</option>
-                        {% for f in merged_folders %}
-                        <option value="{{ f.username }}" data-date="{{ f.date }}">{{ f.username }} / {{ f.date }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                    <button type="button" id="clearBatchBtn" class="btn btn-secondary">حذف</button>
+            
+            <div class="pipeline-modal-body">
+                <div class="pipeline-status-icon">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                </div>
+                <p id="pipelineModalMessage" class="pipeline-modal-text">جارٍ الإعداد وتجهيز المهام...</p>
+                <div class="pipeline-progress-bar">
+                    <div id="pipelineModalProgress" class="pipeline-progress-fill"></div>
                 </div>
             </div>
-        </section>
+            
+            <div class="pipeline-modal-footer">
+                <button type="button" id="btnPipelineCancel" class="btn btn-danger">
+                    <i class="fa-solid fa-ban"></i> إلغاء العملية
+                </button>
+                <button type="button" id="btnPipelineSkipAccount" class="btn btn-secondary" style="display: none;">
+                    <i class="fa-solid fa-forward-step"></i> تخطي الحساب
+                </button>
+            </div>
+        </div>
+    </div>
 
-        <section class="status-section" id="statusSection">
-            <div class="status-card" id="statusCard">
-                <div class="status-icon" id="statusIcon">◇</div>
-                <div class="status-text">
-                    <strong id="statusTitle"></strong>
-                    <span id="statusMessage"></span>
+    <!-- Floating Pipeline Status (Visible when minimized) -->
+    <div id="pipelineFloatingStatus" class="pipeline-floating-status" style="display: none;">
+        <div class="floating-content">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <span id="floatingStatusMessage">جاري تنفيذ العملية في الخلفية...</span>
+            <button type="button" id="btnRestorePipeline" class="btn btn-primary btn-sm">
+                <i class="fa-solid fa-expand"></i> استعادة
+            </button>
+        </div>
+    </div>
+
+    <!-- Original Toast Status -->
+    <section class="status-section" id="statusSection">
+                <div class="status-card" id="statusCard">
+                    <div class="status-icon" id="statusIcon">◇</div>
+                    <div class="status-text">
+                        <strong id="statusTitle"></strong>
+                        <span id="statusMessage"></span>
+                    </div>
+                    <button class="status-close" id="statusClose" aria-label="إغلاق">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </section>
+
+            <footer>
+                <p class="copyright">SnapScrap © 2026</p>
+            </footer>
+        </main>
+    </div>
+
+    <script id="init-data" type="application/json">
+        {
+            "accounts": {{ accounts | tojson | safe if accounts else '[]' }},
+            "teams_config": {{ teams_config | tojson | safe if teams_config else '{}' }}
+        }
+    </script>
+    <script>
+        (function() {
+            try {
+                const data = JSON.parse(document.getElementById('init-data').textContent);
+                window.INIT_ACCOUNTS = data.accounts || [];
+                window.TEAMS_CONFIG = data.teams_config || {};
+            } catch (e) {
+                console.error('Failed to parse init-data', e);
+                window.INIT_ACCOUNTS = [];
+                window.TEAMS_CONFIG = {};
+            }
+        })();
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}?v=1.5"></script>
+    <script>
+        setTimeout(() => {
+            if (window.initApp) {
+                console.log('App initialized');
+            }
+        }, 1000);
+    </script>
+
+    <!-- Task History Modal (سجل العمليات) -->
+    <div id="historyModal" class="history-modal" aria-hidden="true">
+        <div class="history-modal-content">
+            <div class="history-modal-header">
+                <h2><i class="fa-solid fa-clock-rotate-left"></i> سجل العمليات السابقة</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="fetchTaskHistory()"><i class="fa-solid fa-rotate-right"></i> تحديث</button>
+                    <button class="btn btn-secondary" onclick="closeHistoryModal()"><i class="fa-solid fa-times"></i> إغلاق</button>
                 </div>
             </div>
-        </section>
+            <div class="history-modal-body">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>الوقت</th>
+                            <th>معرّف العملية</th>
+                            <th>الحالة</th>
+                            <th>التفاصيل</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr><td colspan="4" style="text-align:center;">جاري تحميل السجل...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-        <footer>
-            <p class="copyright">SnapScrap © 2026</p>
-        </footer>
-    </main>
+    <!-- Thumbnail Preview Modal -->
+    <div id="thumbnailModal" class="history-modal" aria-hidden="true" style="z-index: 10002;">
+        <div class="history-modal-content" style="max-width: 800px;">
+            <div class="history-modal-header">
+                <h2><i class="fa-solid fa-image"></i> معاينة الصورة المصغرة (Thumbnail)</h2>
+                <button class="btn btn-secondary" onclick="closeThumbnailModal()"><i class="fa-solid fa-times"></i> إغلاق</button>
+            </div>
+            <div class="history-modal-body" style="text-align: center;">
+                <div id="thumbnailPreviewContainer" style="margin-bottom: 20px;">
+                    <i class="fa-solid fa-spinner fa-spin fa-3x" style="color: var(--snap-yellow);"></i>
+                    <p style="margin-top:10px;">جاري توليد المعاينة...</p>
+                </div>
+                <img id="thumbnailPreviewImg" src="" style="display: none; width: 100%; border-radius: 12px; border: 2px solid var(--snap-yellow); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            </div>
+        </div>
     </div>
 
     <script>
-        window.INIT_ACCOUNTS = {{ accounts | tojson }};
+        window.closeThumbnailModal = function() {
+            const modal = document.getElementById('thumbnailModal');
+            if(modal) {
+                modal.classList.remove('visible');
+                modal.setAttribute('aria-hidden', 'true');
+            }
+        };
     </script>
-    <script src="/static/app.js"></script>
 </body>
 
 </html>

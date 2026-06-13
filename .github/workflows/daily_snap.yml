@@ -1,0 +1,53 @@
+name: Daily SnapScrap Automation
+
+on:
+  schedule:
+    # Run at 23:00 UTC every day (00:00 Algeria / 02:00 AM KSA next day)
+    - cron: '0 23 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests beautifulsoup4 google-api-python-client google-auth-oauthlib google-auth-httplib2 pillow arabic-reshaper python-bidi flask flask-login playwright
+        python -m playwright install --with-deps chromium
+
+    - name: Restore Secrets and Tokens
+      # This step requires the user to have stored tokens securely
+      # For now, we assume they might be in a private folder or we use GitHub Secrets
+      run: |
+        echo "Restoring secrets..."
+        # Example logic to restore tokens from a secret
+        # echo "${{ secrets.YOUTUBE_TOKENS_ZIP_BASE64 }}" | base64 -d > tokens.zip
+        # unzip tokens.zip -d stories/
+
+    - name: Run Daily Automation
+      env:
+        # Pass any needed env vars
+        PYTHONPATH: .
+      run: python automate_daily.py
+
+    - name: Save Updated Tokens
+      # If tokens were refreshed, they need to be saved back
+      if: always()
+      run: |
+        echo "Saving updated tokens (optional/advanced)..."
+        # Example: zip stories/tokens/ and send to a secure stash

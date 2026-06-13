@@ -37,7 +37,7 @@ def load_config():
 config = load_config()
 CHUNK_SIZE = config.get("chunk_size", 7)
 VIDEO_QUALITY = config.get("video_quality", 23)  # CRF value
-MERGED_DIR = "merged"
+MERGED_DIR = "merged" # Only used as a fallback or name
 # تنسيق Shorts عمودي
 OUTPUT_WIDTH = 1080
 OUTPUT_HEIGHT = 1920
@@ -81,171 +81,238 @@ def get_video_files(folder):
     return [t[1:] for t in files]  # (filename, fullpath)
 
 
+def fast_concat(ffmpeg_exe, file_paths, output_path):
+    """Fast concat for files that already have same encoding (like our chunks)."""
+    if not file_paths:
+        return
+    # Verification: Ensure all source files exist and are not empty
+    valid_paths = []
+    for p in file_paths:
+        if os.path.exists(p) and os.path.getsize(p) > 0:
+            valid_paths.append(p)
+        else:
+            print(f"⚠️ Warning: Skipping missing or empty file: {p}")
+    
+    if not valid_paths:
+        print("❌ Error: No valid files to concat.")
+        return
+
+    list_fd, list_path = tempfile.mkstemp(suffix=".txt", text=True)
+    try:
+        with os.fdopen(list_fd, "w", encoding="utf-8") as f:
+            for p in valid_paths:
+                p_escaped = os.path.abspath(p).replace("\\", "/").replace("'", "'\\''")
+                f.write(f"file '{p_escaped}'\n")
+        cmd = [
+            ffmpeg_exe, "-y",
+            "-fflags", "+genpts",
+            "-f", "concat", "-safe", "0",
+            "-i", list_path, "-c", "copy", output_path
+        ]
+        subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    finally:
+        try: os.unlink(list_path)
+        except: pass
+
 def merge_chunk(ffmpeg_exe, file_paths, output_path):
-    """Merge multiple video files into one with scale to Shorts size.
-    Uses concat filter (re-encodes) to avoid freezing issues."""
+    """Merge video files into one using the concat demuxer and normalization filters."""
     if not file_paths:
         return
     
-    # Build filter_complex for concat with scaling
-    inputs = []
-    scaled = []
-    for i, path in enumerate(file_paths):
-        inputs.extend(["-i", path])
-        # Scale each input to 1080x1920
-        scaled.append(f"[{i}:v]scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=decrease,pad={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1[v{i}]")
+    import tempfile
     
-    # Concat all scaled videos
-    concat_inputs = "".join([f"[v{i}]" for i in range(len(file_paths))])
-    concat_filter = f"{';'.join(scaled)};{concat_inputs}concat=n={len(file_paths)}:v=1:a=1[outv]"
-    
-    # Handle audio - concat audio streams
-    audio_inputs = "".join([f"[{i}:a]" for i in range(len(file_paths))])
-    audio_filter = f"{audio_inputs}concat=n={len(file_paths)}:v=0:a=1[outa]"
-    
-    # Combine filters
-    filter_complex = f"{concat_filter};{audio_filter}"
-    
-    cmd = [
-        ffmpeg_exe,
-        "-y",
-    ] + inputs + [
-        "-filter_complex", filter_complex,
-        "-map", "[outv]",
-        "-map", "[outa]",
-        "-c:v", "libx264",
-        "-preset", "medium",  # Better quality than fast
-        "-crf", str(VIDEO_QUALITY),  # Quality setting from config
-        "-c:a", "aac",
-        "-b:a", "128k",
-        "-movflags", "+faststart",  # Web optimization
-        output_path,
-    ]
-    
+    # We use the parent folder of the first file as the CWD to keep paths relative
+    cwd = os.path.dirname(os.path.abspath(file_paths[0]))
+    # The output path must be absolute because we are changing CWD
+    output_path_abs = os.path.abspath(output_path)
+    # The ffmpeg exe path should also be absolute
+    ffmpeg_abs = os.path.abspath(ffmpeg_exe) if os.path.isfile(ffmpeg_exe) else ffmpeg_exe
+
+    # Create temporary list file for ffmpeg concat demuxer IN THE SAME FOLDER as the snaps
+    list_fd, list_path = tempfile.mkstemp(suffix=".txt", text=True, dir=cwd)
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        with os.fdopen(list_fd, "w", encoding="utf-8") as f:
+            for p in file_paths:
+                # Use only the filename since the list file is in the same folder
+                fname = os.path.basename(p)
+                # Escape single quotes for the list file
+                p_escaped = fname.replace("'", "'\\''")
+                f.write(f"file '{p_escaped}'\n")
+        
+        # Normalization filters (30fps, 1080x1920, yuv420p)
+        vf = (
+            "fps=30,"
+            f"scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:force_original_aspect_ratio=decrease,"
+            f"pad={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:(ow-iw)/2:(oh-ih)/2,"
+            "setsar=1,format=yuv420p"
+        )
+        af = "aresample=44100:async=1"
+
+        # Use the list filename (basename) since FFmpeg is running in that cwd
+        list_filename = os.path.basename(list_path)
+
+        cmd = [
+            ffmpeg_abs,
+            "-y",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", list_filename,
+            "-vf", vf,
+            "-af", af,
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-crf", str(VIDEO_QUALITY),
+            "-c:a", "aac",
+            "-b:a", "128k",
+            "-movflags", "+faststart",
+            output_path_abs,
+        ]
+        
+        # Run subprocess with cwd set to the snaps folder
+        subprocess.run(cmd, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace", cwd=cwd)
     except subprocess.CalledProcessError as e:
-        # Fallback: try concat demuxer if filter fails
-        list_fd, list_path = tempfile.mkstemp(suffix=".txt", text=True)
+        print(f"FFmpeg failed: {e.stderr}", flush=True)
+        raise e
+    finally:
         try:
-            with os.fdopen(list_fd, "w", encoding="utf-8") as f:
-                for p in file_paths:
-                    p_escaped = p.replace("'", "'\\''")
-                    f.write(f"file '{p_escaped}'\n")
-            vf = (
-                f"scale={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:"
-                "force_original_aspect_ratio=decrease,"
-                f"pad={OUTPUT_WIDTH}:{OUTPUT_HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1"
-            )
-            cmd_fallback = [
-                ffmpeg_exe,
-                "-y",
-                "-f", "concat",
-                "-safe", "0",
-                "-i", list_path,
-                "-vf", vf,
-                "-c:v", "libx264",
-                "-preset", "medium",
-                "-crf", str(VIDEO_QUALITY),
-                "-c:a", "aac",
-                "-b:a", "128k",
-                output_path,
-            ]
-            subprocess.run(cmd_fallback, check=True, capture_output=True)
-        finally:
-            try:
+            if os.path.exists(list_path):
                 os.unlink(list_path)
-            except Exception:
-                pass
+        except Exception:
+            pass
 
 
-def main():
-    if "--help" in sys.argv or "-h" in sys.argv:
-        if USE_EN:
-            print("Usage: python merge_videos.py <username> [YYYY-MM-DD] [--all]")
-            print("  Without --all: merge every", CHUNK_SIZE, "videos into merged_1, merged_2, ...")
-            print("  With --all:   merge all videos into one (merged_all.mp4)")
-            print("Example: python merge_videos.py dary_1256 --all")
-        else:
-            print("استخدام: python merge_videos.py <username> [YYYY-MM-DD] [--all]")
-            print("  بدون --all: دمج كل", CHUNK_SIZE, "فيديوهات في ملف (merged_1, merged_2, ...)")
-            print("  مع --all:   دمج كل الفيديوهات في فيديو واحد (merged_all.mp4)")
-            print("مثال:   python merge_videos.py dary_1256 --all")
-        print("\nFull command list: python SnapScrap.py help" if USE_EN else "\nقائمة كل الأوامر: python SnapScrap.py help")
-        sys.exit(0)
-    if len(sys.argv) < 2:
-        print("Usage: python merge_videos.py <username> [YYYY-MM-DD] [--all]" if USE_EN else "استخدام: python merge_videos.py <username> [YYYY-MM-DD] [--all]")
-        sys.exit(1)
-
-    args = [a for a in sys.argv[1:] if a not in ("--all", "--help", "-h", "--en")]
-    merge_all = "--all" in sys.argv
-
-    username = args[0]
-    date_str = args[1] if len(args) > 1 else date.today().strftime("%Y-%m-%d")
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+def merge_videos_for_user(username, date_str=None, merge_all=False, long_only=False):
+    """
+    Programmatic entry point for merging videos.
+    Returns: (success, message, merged_path)
+    """
+    if not date_str:
+        from datetime import date
+        date_str = date.today().strftime("%Y-%m-%d")
     
-    user_id = os.environ.get("SNAPSCRAP_USER_ID", "")
-    if user_id:
-        folder = os.path.join(script_dir, "stories", user_id, username, date_str)
-    else:
-        folder = os.path.join(script_dir, "stories", username, date_str)
-    if not os.path.isdir(folder):
-        print(f"Folder not found: {folder}" if USE_EN else f"المجلد غير موجود: {folder}")
-        sys.exit(1)
-
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    folder = os.path.join(script_dir, "stories", "not merged", username, date_str)
+    merged_path = os.path.join(script_dir, "stories", "merged", username, date_str)
+    
+    raw_exists = os.path.isdir(folder)
     ffmpeg_exe = find_ffmpeg()
+    
     if not ffmpeg_exe:
-        if USE_EN:
-            print("Install ffmpeg (add to PATH) or run: pip install imageio-ffmpeg")
-        else:
-            print("يجب توفير ffmpeg بأحد الطريقتين:")
-            print("  1) تثبيت ffmpeg وإضافته إلى PATH: https://ffmpeg.org/download.html")
-            print("  2) أو تثبيت الحزمة: pip install imageio-ffmpeg")
-        sys.exit(1)
+        return False, "ffmpeg not found", None
 
-    videos = get_video_files(folder)
-    if not videos:
-        print(f"No .mp4 files in folder: {folder}" if USE_EN else f"لا توجد ملفات .mp4 في المجلد: {folder}")
-        sys.exit(1)
-
-    merged_path = os.path.join(folder, MERGED_DIR)
+    videos = get_video_files(folder) if raw_exists else []
     os.makedirs(merged_path, exist_ok=True)
+    
+    # Check for existing chunks
+    existing_chunks = sorted([f for f in os.listdir(merged_path) if f.startswith("merged_") and f.endswith(".mp4") and f != "merged_all.mp4"], 
+                            key=lambda x: int(re.search(r"(\d+)", x).group(1)) if re.search(r"(\d+)", x) else 0)
+    
+    if not raw_exists and not merge_all:
+        return False, f"Folder not found: {folder}", None
+    elif not videos and not existing_chunks and not merge_all:
+        return False, f"No videos to merge in {folder}", None
 
-    if merge_all:
-        paths = [p for _, p in videos]
-        out_path = os.path.join(merged_path, "merged_all.mp4")
-        print(f"Merging {len(videos)} videos into one: merged_all.mp4 ..." if USE_EN else f"دمج كل {len(videos)} فيديو في ملف واحد: merged_all.mp4 ...")
-        try:
-            merge_chunk(ffmpeg_exe, paths, out_path)
-            print(f"Done: {out_path}" if USE_EN else f"تم: {out_path}")
-        except subprocess.CalledProcessError as e:
-            print(f"ffmpeg error: {e}" if USE_EN else f"خطأ في ffmpeg: {e}")
-            if e.stderr:
-                print(e.stderr.decode(errors="replace"))
-            sys.exit(1)
-    else:
+    # 1. Generate chunks for YouTube Shorts (Skip if raw missing or long_only requested)
+    if raw_exists and not long_only:
         chunks = []
         for i in range(0, len(videos), CHUNK_SIZE):
             chunk = videos[i : i + CHUNK_SIZE]
             if chunk:
                 chunks.append(chunk)
 
-        print(f"Videos: {len(videos)} -> merging every {CHUNK_SIZE} = {len(chunks)} file(s)." if USE_EN else f"عدد الفيديوهات: {len(videos)} → دمج كل {CHUNK_SIZE} في فيديو واحد = {len(chunks)} فيديو.")
+        print(f"PIPELINE: Merging {len(videos)} videos into {len(chunks)} shorts for {username}")
         for idx, chunk in enumerate(chunks, start=1):
+            # Output progress for app.py to capture
+            print(f"[PROGRESS] {idx}/{len(chunks)} shorts", flush=True)
+            
             paths = [p for _, p in chunk]
             out_name = f"merged_{idx}.mp4"
             out_path = os.path.join(merged_path, out_name)
-            print(f"  Merge {idx}/{len(chunks)}: {out_name} ..." if USE_EN else f"  دمج {idx}/{len(chunks)}: {out_name} ...")
+
+            # Check if output is newer than all inputs
+            needs_merge = True
+            if os.path.exists(out_path):
+                out_mtime = os.path.getmtime(out_path)
+                inputs_mtime = max((os.path.getmtime(p) for p in paths if os.path.exists(p)), default=0)
+                if out_mtime > inputs_mtime:
+                    needs_merge = False
+
+            if not needs_merge:
+                continue
+
             try:
                 merge_chunk(ffmpeg_exe, paths, out_path)
-                print(f"    Done: {out_path}" if USE_EN else f"    تم: {out_path}")
-            except subprocess.CalledProcessError as e:
-                print(f"    ffmpeg error: {e}" if USE_EN else f"    خطأ في ffmpeg: {e}")
-                if e.stderr:
-                    print(e.stderr.decode(errors="replace"))
+            except Exception as e:
+                print(f"Error merging chunk {idx} for {username}: {e}", flush=True)
+                return False, str(e), None
+    elif raw_exists and long_only:
+        print(f"PIPELINE: Direct long-video merge for {username} ({len(videos)} videos)...")
 
-    print(f"\nDone. Merged files in: {merged_path}" if USE_EN else f"\nانتهى. الفيديوهات المدمجة في: {merged_path}")
-    print("Upload: python upload_youtube_shorts.py" if USE_EN else "لرفعها على يوتيوب شورتس: python upload_youtube_shorts.py", username, date_str)
+    # 2. Generate full long video
+    out_all_path = os.path.join(merged_path, "merged_all.mp4")
+    
+    if raw_exists and long_only:
+        # Direct merge from raw snaps to merged_all.mp4
+        all_paths = [p for _, p in videos]
+        print(f"[PROGRESS] Creating direct long video...", flush=True)
+        try:
+            merge_chunk(ffmpeg_exe, all_paths, out_all_path)
+            return True, "Direct merge success", merged_path
+        except Exception as e:
+            return False, f"Direct merge failed: {e}", None
+
+    if raw_exists:
+        chunk_paths = [os.path.join(merged_path, f"merged_{i+1}.mp4") for i in range(len(chunks))]
+    else:
+        chunk_paths = [os.path.join(merged_path, f) for f in existing_chunks]
+    
+    chunk_paths = [p for p in chunk_paths if os.path.exists(p)]
+    
+    if merge_all or (not raw_exists and existing_chunks):
+        out_all_path = os.path.join(merged_path, "merged_all.mp4")
+        needs_merge = True
+        if os.path.exists(out_all_path):
+            out_mtime = os.path.getmtime(out_all_path)
+            inputs_mtime = max((os.path.getmtime(p) for p in chunk_paths if os.path.exists(p)), default=0)
+            if out_mtime > inputs_mtime:
+                needs_merge = False
+
+        if needs_merge and chunk_paths:
+            try:
+                if len(chunk_paths) == 1:
+                    import shutil
+                    shutil.copy2(chunk_paths[0], out_all_path)
+                else:
+                    fast_concat(ffmpeg_exe, chunk_paths, out_all_path)
+            except Exception as e:
+                print(f"Error merging all for {username}: {e}")
+
+    return True, "Success", merged_path
+
+
+def main():
+    if "--help" in sys.argv or "-h" in sys.argv:
+        print("Usage: python merge_videos.py <username> [YYYY-MM-DD] [--all] [--long-only]")
+        sys.exit(0)
+    
+    merge_all = "--all" in sys.argv
+    long_only = "--long-only" in sys.argv
+    args = [a for a in sys.argv[1:] if a not in ("--all", "--long-only", "--help", "-h", "--en")]
+    
+    if len(args) < 1:
+        print("Usage: python merge_videos.py <username> [YYYY-MM-DD] [--all] [--long-only]")
+        sys.exit(1)
+
+    username = args[0]
+    date_str = args[1] if len(args) > 1 else None
+    
+    success, msg, path = merge_videos_for_user(username, date_str, merge_all=merge_all, long_only=long_only)
+    if success:
+        print(f"PIPELINE_SUCCESS: {msg}")
+        if path: print(f"Merged files in: {path}")
+    else:
+        print(f"PIPELINE_ERROR: {msg}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

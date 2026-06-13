@@ -13,7 +13,7 @@ SnapScrap.py/
 │       ├── style.css          # التنسيقات
 │       └── app.js             # منطق الواجهة
 │
-├── SnapScrap.py               # تنزيل الستوريات (سكريبت أساسي)
+├── SnapScrap.py               # تنزيل السنابات (سكريبت أساسي)
 ├── merge_videos.py            # دمج الفيديوهات (Shorts / كامل)
 ├── upload_youtube_shorts.py   # رفع يوتيوب (سطر أوامر)
 ├── download_tracker.py        # تتبع التنزيلات
@@ -35,7 +35,7 @@ SnapScrap.py/
 
 | المجلد | الوظيفة |
 |--------|---------|
-| `username/YYYY-MM-DD/` | ستوريات منسخة (مثل `dary_1256/2026-02-16/`) |
+| `username/YYYY-MM-DD/` | سنابات منسخة (مثل `dary_1256/2026-02-16/`) |
 | `username/YYYY-MM-DD/merged/` | فيديوهات مدمجة (`merged_1.mp4`, `merged_all.mp4`) |
 | `uploads/` | ملفات مؤقتة عند رفع ملف من الويب |
 | `build/`, `dist/` | مخرجات PyInstaller |

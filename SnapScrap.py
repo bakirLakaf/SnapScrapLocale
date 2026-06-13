@@ -12,6 +12,8 @@ from time import sleep
 
 from bs4 import BeautifulSoup
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 from download_tracker import is_downloaded, mark_downloaded
 
@@ -26,6 +28,47 @@ if sys.platform == "win32":
 USE_EN = os.environ.get("SNAPSCRAP_LANG", "").lower() == "en" or "--en" in sys.argv
 if "--en" in sys.argv:
     sys.argv = [a for a in sys.argv if a != "--en"]
+
+# Parse --skip-first N
+SKIP_FIRST = 0
+if "--skip-first" in sys.argv:
+    idx = sys.argv.index("--skip-first")
+    try:
+        SKIP_FIRST = int(sys.argv[idx+1])
+        sys.argv.pop(idx) # removed '--skip-first'
+        sys.argv.pop(idx) # removed 'N'
+    except (IndexError, ValueError):
+        sys.argv.pop(idx)
+
+# Parse --date YYYY-MM-DD
+TARGET_DATE = date.today().strftime("%Y-%m-%d")
+if "--date" in sys.argv:
+    idx = sys.argv.index("--date")
+    try:
+        TARGET_DATE = sys.argv[idx+1]
+        sys.argv.pop(idx) # removed '--date'
+        sys.argv.pop(idx) # removed 'YYYY-MM-DD'
+    except (IndexError, ValueError):
+        sys.argv.pop(idx)
+
+# Parse --today-only
+TODAY_ONLY = False
+if "--today-only" in sys.argv:
+    TODAY_ONLY = True
+    sys.argv.remove("--today-only")
+
+# Parse --custom-links "link1,link2"
+CUSTOM_LINKS = []
+if "--custom-links" in sys.argv:
+    idx = sys.argv.index("--custom-links")
+    try:
+        links_str = sys.argv[idx+1]
+        CUSTOM_LINKS = [link.strip() for link in links_str.split(",") if link.strip()]
+        sys.argv.pop(idx) # removed '--custom-links'
+        sys.argv.pop(idx) # removed links string
+    except IndexError:
+        sys.argv.pop(idx)
+
 
 
 def show_help():
@@ -108,12 +151,10 @@ def user_input():
         sys.exit(0)
 
     user_id = os.environ.get("SNAPSCRAP_USER_ID", "")
-    if user_id:
-        path = os.path.join("stories", user_id, username)
-    else:
-        path = os.path.join("stories", username)
+    # Removed user_id prefixing as requested to simplify paths
+    path = os.path.join("stories", "not merged", username)
         
-    date_str = date.today().strftime("%Y-%m-%d")
+    date_str = TARGET_DATE
     date_folder = os.path.join(path, date_str)
 
     if os.path.exists(path):
@@ -129,7 +170,20 @@ def user_input():
 YELLOW = "\033[1;32;40m"
 RED = "\033[31m"
 
-headers = {'User-Agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:94.0) Gecko/20100101 Firefox/103.0.2'}
+# Modern User-Agent (Chrome on Windows)
+headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
+
+# Setup Session with Retries
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=1,
+    status_forcelist=[429, 500, 502, 503, 504],
+    allowed_methods=["HEAD", "GET", "OPTIONS"]
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+session = requests.Session()
+session.mount("https://", adapter)
+session.mount("http://", adapter)
 
 base_url = "https://story.snapchat.com/@"
 username = user_input()
@@ -141,19 +195,26 @@ print(mix)
 def get_json():
 	"""Get json from the website"""
 
-	r = requests.get(mix, headers=headers)
+	try:
+		r = session.get(mix, headers=headers, timeout=15)
+	except Exception as e:
+		sys.exit(f"{RED} Oh Snap! No connection with Snap! Error: {e}")
 
 	if not r.ok:
-		sys.exit(f"{RED} Oh Snap! No connection with Snap!")
+		sys.exit(f"{RED} Oh Snap! No connection with Snap! Status: {r.status_code}")
 
 	soup = BeautifulSoup(r.content, "html.parser")
-	snaps = soup.find(id="__NEXT_DATA__").string.strip()
+	snaps_data = soup.find(id="__NEXT_DATA__")
+	if not snaps_data:
+		sys.exit(f"{RED} Oh Snap! Could not find data on the page!")
+	
+	snaps = snaps_data.string.strip()
 	data = json.loads(snaps)
 
 	return data
 
 
-def profile_metadata(json_dict=get_json()):
+def profile_metadata(json_dict):
 	"""Detect public profile, then print bio and bitmoji"""
 	# if public
 	try:
@@ -177,59 +238,117 @@ def profile_metadata(json_dict=get_json()):
 	print(f"Getting posts of: {username}\n")
 
 
-def download_media(json_dict=get_json()):
+def download_media(json_dict):
 	"""Print media URLs and download media."""
-
-	date_str = date.today().strftime("%Y-%m-%d")
+	from datetime import datetime
+	date_str = TARGET_DATE
 	skipped = 0
 	downloaded = 0
 
+	today_start_timestamp = int(datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+	file_index = 1
+
+	# 1. Process custom links first
+	for file_url in CUSTOM_LINKS:
+		if file_url == "": continue
+		if is_downloaded(username, date_str, file_url):
+			skipped += 1
+			file_index += 1
+			continue
+
+		try:
+			r = session.get(file_url, stream=True, headers=headers, timeout=20)
+			r.raise_for_status()
+		except Exception as e:
+			print(f"{RED} Cannot make connection to download custom link {file_index}: {e}")
+			file_index += 1
+			continue
+
+		if "image" in r.headers.get('Content-Type', ''): ext = ".jpeg"
+		elif "video" in r.headers.get('Content-Type', ''): ext = ".mp4"
+		else: ext = ".bin"
+
+		file_name = f"{file_index}{ext}"
+		if os.path.isfile(file_name):
+			mark_downloaded(username, date_str, file_url, file_name)
+			skipped += 1
+			file_index += 1
+			continue
+
+		print(f"[PROGRESS] {file_index}/(Custom)")
+		print(file_name)
+		sleep(0.3)
+
+		if r.status_code == 200:
+			with open(file_name, 'wb') as f:
+				for chunk in r: f.write(chunk)
+			mark_downloaded(username, date_str, file_url, file_name)
+			downloaded += 1
+		else:
+			print(f"{RED} Cannot download custom media {file_index}, Status: {r.status_code}")
+		file_index += 1
+
+	# 2. Process profile regular snaps
 	try:
-		# Get all links with a for-loop (numbered 1, 2, 3, ...)
-		for num, i in enumerate(json_dict["props"]["pageProps"]["story"]["snapList"], start=1):
+		story = json_dict["props"]["pageProps"].get("story")
+		snap_list = story.get("snapList") if story else None
+		if not snap_list:
+			raise KeyError("No snaps found")
+
+		total_snaps = len(snap_list)
+		for num, i in enumerate(snap_list, start=1):
+			if num <= SKIP_FIRST:
+				print(f"[PROGRESS] {num}/{total_snaps}")
+				print(f"Skipped (First {SKIP_FIRST} rule)...")
+				skipped += 1
+				continue
+
+			if TODAY_ONLY:
+				ts_val = i.get("timestampInSec", {}).get("value")
+				if ts_val and int(ts_val) < today_start_timestamp:
+					skipped += 1
+					continue
 
 			file_url = i["snapUrls"]["mediaUrl"]
-
 			if file_url == "":
 				print("There is a Story but no URL is provided by Snapchat.")
 				continue
 
-			# Check if already downloaded
 			if is_downloaded(username, date_str, file_url):
 				skipped += 1
 				continue
 
-			# Download media
-			r = requests.get(file_url, stream=True, headers=headers)
+			try:
+				r = session.get(file_url, stream=True, headers=headers, timeout=20)
+				r.raise_for_status()
+			except Exception as e:
+				print(f"{RED} Cannot make connection to download media {file_index}: {e}")
+				file_index += 1
+				continue
 
-			if "image" in r.headers['Content-Type']:
-				ext = ".jpeg"
-			elif "video" in r.headers['Content-Type']:
-				ext = ".mp4"
-			else:
-				ext = ".bin"
+			if "image" in r.headers.get('Content-Type', ''): ext = ".jpeg"
+			elif "video" in r.headers.get('Content-Type', ''): ext = ".mp4"
+			else: ext = ".bin"
 
-			file_name = f"{num}{ext}"
-			
-			#  Check if this file / file_name exists locally
+			file_name = f"{file_index}{ext}"
 			if os.path.isfile(file_name):
 				mark_downloaded(username, date_str, file_url, file_name)
 				skipped += 1
+				file_index += 1
 				continue
 
+			print(f"[PROGRESS] {num}/{total_snaps}")
 			print(file_name)
-
-			#  Sleep a bit
 			sleep(0.3)
 
 			if r.status_code == 200:
 				with open(file_name, 'wb') as f:
-					for chunk in r:
-						f.write(chunk)
+					for chunk in r: f.write(chunk)
 				mark_downloaded(username, date_str, file_url, file_name)
 				downloaded += 1
 			else:
-				print("Cannot make connection to download media!")
+				print(f"{RED} Cannot download media {file_index}, Status: {r.status_code}")
+			file_index += 1
 
 	except KeyError:
 		print(f"{RED}No user stories found for the last 24h.")
@@ -248,13 +367,14 @@ def main():
 	start = time.perf_counter()
 	do_merge = "--merge" in sys.argv
 
-	profile_metadata()
-	download_media()
+	data = get_json()
+	profile_metadata(data)
+	download_media(data)
 
 	if do_merge:
 		script_dir = os.path.dirname(os.path.abspath(__file__))
 		merge_script = os.path.join(script_dir, "merge_videos.py")
-		date_str = date.today().strftime("%Y-%m-%d")
+		date_str = TARGET_DATE
 		merge_msg = f"\n{YELLOW}Merging videos (date: {date_str})..." if USE_EN else f"\n{YELLOW}دمج كل 6 فيديوهات (تاريخ اليوم: {date_str})..."
 		print(merge_msg)
 		env = os.environ.copy()
