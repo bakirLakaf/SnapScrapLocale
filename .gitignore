@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+*.egg-info/
+.eggs/
+dist/
+
+# Build
+build/
+*.exe
+*.spec
+
+# Secrets & tokens
+client_secret*.json
+client_secrets.json
+token.json
+tokens/
+railway_dari_bot/tokens_bundle.txt
+
+# Web app
+webapp_config.json
+uploads/
+
+# User data (downloaded content)
+stories/
+*.mp4
+*.mkv
+*.webm
