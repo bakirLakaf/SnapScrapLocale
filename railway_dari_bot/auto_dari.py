@@ -265,7 +265,9 @@ def main():
     ensure_account_config()
     setup_ffmpeg_thread_limit()
 
-    # تاريخ السنابات = اليوم بتوقيت الجزائر
+    # تاريخ السنابات = اليوم بتوقيت الجزائر.
+    # نمرّره صراحةً إلى SnapScrap.py (--date) ليطابق مجلّد التحميل مجلّد الدمج،
+    # وإلا فعند تجاوز منتصف الليل يختلف تاريخ الحاوية (UTC) عن تاريخ الجزائر.
     date_str = datetime.now(ALGERIA_TZ).strftime("%Y-%m-%d")
     log(f"📅 تاريخ السنابات: {date_str}")
 
@@ -275,7 +277,7 @@ def main():
         dl_env = {"SNAPSCRAP_FORCE_RELOAD": "1"}
         log("🔄 وضع إعادة التحميل القسري مفعّل — سيتم تجاهل سجل التتبّع وإعادة تنزيل سنابات اليوم.")
     ok = run_cmd(
-        [sys.executable, str(REPO_ROOT / "SnapScrap.py"), SNAP_USERNAME],
+        [sys.executable, str(REPO_ROOT / "SnapScrap.py"), SNAP_USERNAME, "--date", date_str],
         "تحميل السنابات",
         extra_env=dl_env,
     )
