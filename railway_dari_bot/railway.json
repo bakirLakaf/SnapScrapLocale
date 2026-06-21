@@ -6,7 +6,7 @@
   },
   "deploy": {
     "startCommand": "python railway_dari_bot/auto_dari.py",
-    "cronSchedule": "20 22 * * *",
+    "cronSchedule": "0 21 * * *",
     "restartPolicyType": "NEVER"
   }
 }
