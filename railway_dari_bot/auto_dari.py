@@ -41,6 +41,9 @@ PUBLISH_MINUTE_DZ = int(os.environ.get("PUBLISH_MINUTE_DZ", "0"))
 DELETE_AFTER_UPLOAD = os.environ.get("DELETE_AFTER_UPLOAD", "1") == "1"
 # حد خيوط ffmpeg لتفادي نفاد الذاكرة (OOM) على حاويات Railway المحدودة
 FFMPEG_THREADS = os.environ.get("FFMPEG_THREADS", "2")
+# إعادة تحميل قسرية: تتجاهل سجل التتبّع (download_history.json) وتُعيد تنزيل سنابات
+# اليوم من جديد. مفيدة لإعادة معالجة تاريخ سبق التعامل معه (الافتراضي: معطّل).
+FORCE_RELOAD = os.environ.get("FORCE_RELOAD", "0") == "1"
 # أصغر حجم مقبول للفيديو المدمج (أقل من ذلك = تالف/ناقص)
 MIN_VALID_BYTES = 100 * 1024
 
@@ -195,12 +198,14 @@ def validate_video(path):
 
 
 # ── 4. تشغيل أمر فرعي ──────────────────────────────────────────────────────
-def run_cmd(cmd, label):
+def run_cmd(cmd, label, extra_env=None):
     log(f"▶️ {label}: {' '.join(str(c) for c in cmd)}")
     env = os.environ.copy()
     env["SNAPSCRAP_LANG"] = "en"
     env["SNAPSCRAP_USER_ID"] = str(USER_ID)
     env["PYTHONUNBUFFERED"] = "1"
+    if extra_env:
+        env.update(extra_env)
     proc = subprocess.run(cmd, cwd=str(REPO_ROOT), env=env)
     if proc.returncode != 0:
         log(f"⚠️ {label} انتهى برمز {proc.returncode}")
@@ -241,9 +246,14 @@ def main():
     log(f"📅 تاريخ السنابات: {date_str}")
 
     # 1. التحميل
+    dl_env = None
+    if FORCE_RELOAD:
+        dl_env = {"SNAPSCRAP_FORCE_RELOAD": "1"}
+        log("🔄 وضع إعادة التحميل القسري مفعّل — سيتم تجاهل سجل التتبّع وإعادة تنزيل سنابات اليوم.")
     ok = run_cmd(
         [sys.executable, str(REPO_ROOT / "SnapScrap.py"), SNAP_USERNAME],
         "تحميل السنابات",
+        extra_env=dl_env,
     )
     if not ok:
         log("❌ فشل التحميل — إيقاف.")
