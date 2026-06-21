@@ -158,23 +158,39 @@ def setup_ffmpeg_thread_limit():
     if not real:
         log("⚠️ لم يُعثر على ffmpeg في PATH — تخطّي حد الخيوط.")
         return
-    bin_dir = Path("/tmp/ffwrap_bin")
-    bin_dir.mkdir(parents=True, exist_ok=True)
-    wrapper = bin_dir / "ffmpeg"
     # استدعاءات الفحص (-version) تمر دون تعديل؛ غيرها يُحقن فيها -threads
-    wrapper.write_text(
+    content = (
         "#!/bin/sh\n"
         f'REAL="{real}"\n'
         'case "$1" in\n'
-        '  -version|-buildconf|-encoders|-decoders|-formats|-codecs|-h|-help)\n'
+        '  -version|-buildconf|-encoders|-decoders|-formats|-codecs|-h|-help|-L|-licenses)\n'
         '    exec "$REAL" "$@" ;;\n'
         'esac\n'
-        f'exec "$REAL" -threads {FFMPEG_THREADS} -filter_threads {FFMPEG_THREADS} "$@"\n',
-        encoding="utf-8",
+        f'exec "$REAL" -threads {FFMPEG_THREADS} -filter_threads {FFMPEG_THREADS} "$@"\n'
     )
-    os.chmod(wrapper, 0o755)
-    os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
-    log(f"🧵 تم تفعيل حد خيوط ffmpeg = {FFMPEG_THREADS} (لتفادي نفاد الذاكرة)")
+    # مرشّحات قابلة للتنفيذ — نتجنّب /tmp لأنه قد يكون noexec على Railway
+    candidates = [
+        REPO_ROOT / ".ffwrap_bin",
+        Path.home() / ".ffwrap_bin",
+        Path("/usr/local/ffwrap_bin"),
+    ]
+    for bin_dir in candidates:
+        try:
+            bin_dir.mkdir(parents=True, exist_ok=True)
+            wrapper = bin_dir / "ffmpeg"
+            wrapper.write_text(content, encoding="utf-8")
+            os.chmod(wrapper, 0o755)
+            # تحقّق فعلي أن الموقع قابل للتنفيذ (يكشف noexec)
+            test = subprocess.run([str(wrapper), "-version"], capture_output=True, text=True)
+            if test.returncode == 0:
+                os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+                log(f"🧵 تم تفعيل حد خيوط ffmpeg = {FFMPEG_THREADS} (عبر {bin_dir})")
+                return
+            log(f"⚠️ {bin_dir} غير قابل للتنفيذ (noexec؟) — أجرّب موقعاً آخر.")
+        except Exception as e:
+            log(f"⚠️ تعذّر إنشاء الغلاف في {bin_dir}: {e}")
+            continue
+    log("⚠️ تعذّر تفعيل غلاف حد الخيوط — قد يحدث نفاد ذاكرة أثناء الدمج.")
 
 
 # ── التحقق من سلامة الفيديو المدمج ──────────────────────────────────────────
