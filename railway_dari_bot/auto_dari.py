@@ -158,15 +158,23 @@ def setup_ffmpeg_thread_limit():
     if not real:
         log("⚠️ لم يُعثر على ffmpeg في PATH — تخطّي حد الخيوط.")
         return
-    # استدعاءات الفحص (-version) تمر دون تعديل؛ غيرها يُحقن فيها -threads
+    # غلاف Python: يحقن -threads قبل ملف الإخراج مباشرة (خيار إخراج) ليحد من
+    # المُرمِّز x264 — وهو مصدر استهلاك الذاكرة. وضعه قبل -i يحد المُفكِّك فقط (لا يكفي).
+    # استدعاءات الفحص (مثل -version) تمر دون تعديل.
     content = (
-        "#!/bin/sh\n"
-        f'REAL="{real}"\n'
-        'case "$1" in\n'
-        '  -version|-buildconf|-encoders|-decoders|-formats|-codecs|-h|-help|-L|-licenses)\n'
-        '    exec "$REAL" "$@" ;;\n'
-        'esac\n'
-        f'exec "$REAL" -threads {FFMPEG_THREADS} -filter_threads {FFMPEG_THREADS} "$@"\n'
+        f"#!{sys.executable}\n"
+        "import os, sys\n"
+        f"REAL = {real!r}\n"
+        f"T = {FFMPEG_THREADS!r}\n"
+        "args = sys.argv[1:]\n"
+        "passthrough = ('-version', '-buildconf', '-encoders', '-decoders',\n"
+        "               '-formats', '-codecs', '-h', '-help', '-L', '-licenses')\n"
+        "if args and args[0] in passthrough:\n"
+        "    os.execv(REAL, [REAL] + args)\n"
+        "if args:\n"
+        "    # أدرج -threads قبل آخر وسيط (ملف الإخراج) ليُطبَّق على المُرمِّز\n"
+        "    args = args[:-1] + ['-threads', T] + [args[-1]]\n"
+        "os.execv(REAL, [REAL] + args)\n"
     )
     # مرشّحات قابلة للتنفيذ — نتجنّب /tmp لأنه قد يكون noexec على Railway
     candidates = [
