@@ -39,6 +39,10 @@ PUBLISH_HOUR_DZ = int(os.environ.get("PUBLISH_HOUR_DZ", "23"))
 PUBLISH_MINUTE_DZ = int(os.environ.get("PUBLISH_MINUTE_DZ", "0"))
 # privacy: عند الجدولة يجب أن تكون private (شرط يوتيوب)
 DELETE_AFTER_UPLOAD = os.environ.get("DELETE_AFTER_UPLOAD", "1") == "1"
+# حد خيوط ffmpeg لتفادي نفاد الذاكرة (OOM) على حاويات Railway المحدودة
+FFMPEG_THREADS = os.environ.get("FFMPEG_THREADS", "2")
+# أصغر حجم مقبول للفيديو المدمج (أقل من ذلك = تالف/ناقص)
+MIN_VALID_BYTES = 100 * 1024
 
 STORIES_DIR = REPO_ROOT / "stories"
 TOKENS_DIR = STORIES_DIR / "tokens"
@@ -137,6 +141,59 @@ def compute_publish_at():
     return target_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), target_dz
 
 
+# ── حد خيوط ffmpeg (تفادي OOM دون تعديل merge_videos.py) ────────────────────
+def setup_ffmpeg_thread_limit():
+    """
+    ينشئ wrapper باسم ffmpeg في مقدمة PATH يحقن -threads للحد من استهلاك الذاكرة.
+    السبب: merge_videos.py يستدعي ffmpeg من PATH دون تحديد -threads، فيختار x264
+    عدد خيوط = عدد المعالجات (60 على Railway) → نفاد الذاكرة وقتل العملية (SIGKILL 9).
+    لا يلمس أي كود أصلي — مجرد اعتراض لاستدعاء ffmpeg.
+    """
+    if sys.platform == "win32":
+        return  # غير مطلوب محلياً على ويندوز
+    real = shutil.which("ffmpeg")
+    if not real:
+        log("⚠️ لم يُعثر على ffmpeg في PATH — تخطّي حد الخيوط.")
+        return
+    bin_dir = Path("/tmp/ffwrap_bin")
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    wrapper = bin_dir / "ffmpeg"
+    # استدعاءات الفحص (-version) تمر دون تعديل؛ غيرها يُحقن فيها -threads
+    wrapper.write_text(
+        "#!/bin/sh\n"
+        f'REAL="{real}"\n'
+        'case "$1" in\n'
+        '  -version|-buildconf|-encoders|-decoders|-formats|-codecs|-h|-help)\n'
+        '    exec "$REAL" "$@" ;;\n'
+        'esac\n'
+        f'exec "$REAL" -threads {FFMPEG_THREADS} -filter_threads {FFMPEG_THREADS} "$@"\n',
+        encoding="utf-8",
+    )
+    os.chmod(wrapper, 0o755)
+    os.environ["PATH"] = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+    log(f"🧵 تم تفعيل حد خيوط ffmpeg = {FFMPEG_THREADS} (لتفادي نفاد الذاكرة)")
+
+
+# ── التحقق من سلامة الفيديو المدمج ──────────────────────────────────────────
+def validate_video(path):
+    """يُرجع True إن كان الفيديو مكتملاً وقابلاً للقراءة (له مدة/moov)."""
+    if not path.exists() or path.stat().st_size < MIN_VALID_BYTES:
+        return False
+    ffprobe = shutil.which("ffprobe")
+    if not ffprobe:
+        return True  # تعذّر التحقق العميق — نكتفي بفحص الحجم
+    try:
+        r = subprocess.run(
+            [ffprobe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(path)],
+            capture_output=True, text=True, timeout=60,
+        )
+        dur = (r.stdout or "").strip()
+        return r.returncode == 0 and dur not in ("", "N/A") and float(dur) > 0
+    except Exception:
+        return False
+
+
 # ── 4. تشغيل أمر فرعي ──────────────────────────────────────────────────────
 def run_cmd(cmd, label):
     log(f"▶️ {label}: {' '.join(str(c) for c in cmd)}")
@@ -174,9 +231,10 @@ def main():
     log("🚀 بدء بوت ضاري الفلاح اليومي على Railway")
     log(f"   الحساب: {SNAP_USERNAME} | القناة: {CHANNEL_ID}")
 
-    # 0. استرجاع التوكنات
+    # 0. استرجاع التوكنات + حد خيوط ffmpeg
     restore_tokens_bundle()
     ensure_account_config()
+    setup_ffmpeg_thread_limit()
 
     # تاريخ السنابات = اليوم بتوقيت الجزائر
     date_str = datetime.now(ALGERIA_TZ).strftime("%Y-%m-%d")
@@ -192,15 +250,24 @@ def main():
         sys.exit(1)
 
     # 2. الدمج (الفيديو الطويل فقط)
-    run_cmd(
+    merge_ok = run_cmd(
         [sys.executable, str(REPO_ROOT / "merge_videos.py"), SNAP_USERNAME, date_str, "--long-only"],
         "دمج merged_all.mp4",
     )
 
     merged_all = STORIES_DIR / "merged" / SNAP_USERNAME / date_str / "merged_all.mp4"
-    if not merged_all.exists():
-        log(f"❌ لم يُنشأ merged_all.mp4 (لا سنابات اليوم؟) — إيقاف دون رفع/حذف.")
+
+    # 🛡️ بوابة أمان: لا رفع ولا حذف إلا إذا نجح الدمج وكان الفيديو سليماً
+    if not merge_ok:
+        log("❌ فشل الدمج (رمز خروج غير صفري) — إيقاف دون رفع أو حذف. المصادر محفوظة لإعادة المحاولة غداً.")
         sys.exit(1)
+    if not merged_all.exists():
+        log("❌ لم يُنشأ merged_all.mp4 (لا سنابات اليوم؟) — إيقاف دون رفع/حذف.")
+        sys.exit(1)
+    if not validate_video(merged_all):
+        log("❌ الفيديو المدمج تالف أو ناقص (moov مفقود/حجم صغير) — إيقاف دون رفع/حذف. المصادر محفوظة.")
+        sys.exit(1)
+    log(f"✅ تم التحقق من سلامة الفيديو المدمج ({round(merged_all.stat().st_size / (1024*1024), 1)} MB).")
 
     # 3. الرفع (merged_all فقط + جدولة)
     publish_at, target_dz = compute_publish_at()
