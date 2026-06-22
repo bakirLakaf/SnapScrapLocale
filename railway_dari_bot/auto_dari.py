@@ -34,9 +34,13 @@ USER_ID = os.environ.get("SNAPSCRAP_USER_ID", "1")
 
 # الجزائر = UTC+1 (بدون توقيت صيفي)
 ALGERIA_TZ = timezone(timedelta(hours=1))
-# ساعة النشر المجدول بتوقيت الجزائر (الافتراضي 23:00)
+# ساعة نشر الفيديو الطويل بتوقيت الجزائر (الافتراضي 23:00 نفس اليوم)
 PUBLISH_HOUR_DZ = int(os.environ.get("PUBLISH_HOUR_DZ", "23"))
 PUBLISH_MINUTE_DZ = int(os.environ.get("PUBLISH_MINUTE_DZ", "0"))
+# الشورتس: أول واحد ينشر الساعة 8 صباحاً من اليوم التالي، ثم كل 15 دقيقة واحد
+SHORTS_PUBLISH_HOUR_DZ = int(os.environ.get("SHORTS_PUBLISH_HOUR_DZ", "8"))
+SHORTS_PUBLISH_MINUTE_DZ = int(os.environ.get("SHORTS_PUBLISH_MINUTE_DZ", "0"))
+SHORTS_INTERVAL_MINUTES = int(os.environ.get("SHORTS_INTERVAL_MINUTES", "15"))
 # privacy: عند الجدولة يجب أن تكون private (شرط يوتيوب)
 DELETE_AFTER_UPLOAD = os.environ.get("DELETE_AFTER_UPLOAD", "1") == "1"
 # حد خيوط ffmpeg لتفادي نفاد الذاكرة (OOM) على حاويات Railway المحدودة
@@ -142,6 +146,27 @@ def compute_publish_at():
         target_dz += timedelta(days=1)
     target_utc = target_dz.astimezone(timezone.utc)
     return target_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), target_dz
+
+
+def compute_shorts_publish_at(date_str):
+    """
+    يُرجع (publish_at, first_dz) لأول شورت:
+    أول شورت ينشر الساعة 8 صباحاً من اليوم *التالي* ليوم تحميل السنابات،
+    ثم كل شورت بعده +SHORTS_INTERVAL_MINUTES.
+
+    upload_from_folder يحسب الإزاحة = رقم الشورت × الفاصل (merged_1 → +فاصل واحد).
+    لذا نطرح فاصلاً واحداً من وقت الأساس حتى يقع merged_1 على 8:00 بالضبط:
+        merged_1 → base + 1×15 = 8:00 ✓   |   merged_2 → base + 2×15 = 8:15 ✓
+    """
+    import datetime as dt_mod
+    snap_day = datetime.strptime(date_str, "%Y-%m-%d")
+    first_dz_naive = snap_day + timedelta(
+        days=1, hours=SHORTS_PUBLISH_HOUR_DZ, minutes=SHORTS_PUBLISH_MINUTE_DZ
+    )
+    first_dz = first_dz_naive.replace(tzinfo=ALGERIA_TZ)
+    base_dz = first_dz - timedelta(minutes=SHORTS_INTERVAL_MINUTES)
+    base_utc = base_dz.astimezone(dt_mod.timezone.utc)
+    return base_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), first_dz
 
 
 # ── حد خيوط ffmpeg (تفادي OOM دون تعديل merge_videos.py) ────────────────────
@@ -285,15 +310,16 @@ def main():
         log("❌ فشل التحميل — إيقاف.")
         sys.exit(1)
 
-    # 2. الدمج (الفيديو الطويل فقط)
+    # 2. الدمج (الشورتس + الفيديو الطويل) عبر --all
     merge_ok = run_cmd(
-        [sys.executable, str(REPO_ROOT / "merge_videos.py"), SNAP_USERNAME, date_str, "--long-only"],
-        "دمج merged_all.mp4",
+        [sys.executable, str(REPO_ROOT / "merge_videos.py"), SNAP_USERNAME, date_str, "--all"],
+        "دمج الشورتس + merged_all.mp4",
     )
 
-    merged_all = STORIES_DIR / "merged" / SNAP_USERNAME / date_str / "merged_all.mp4"
+    merged_dir = STORIES_DIR / "merged" / SNAP_USERNAME / date_str
+    merged_all = merged_dir / "merged_all.mp4"
 
-    # 🛡️ بوابة أمان: لا رفع ولا حذف إلا إذا نجح الدمج وكان الفيديو سليماً
+    # 🛡️ بوابة أمان: لا رفع ولا حذف إلا إذا نجح الدمج وكان الفيديو الطويل سليماً
     if not merge_ok:
         log("❌ فشل الدمج (رمز خروج غير صفري) — إيقاف دون رفع أو حذف. المصادر محفوظة لإعادة المحاولة غداً.")
         sys.exit(1)
@@ -303,35 +329,60 @@ def main():
     if not validate_video(merged_all):
         log("❌ الفيديو المدمج تالف أو ناقص (moov مفقود/حجم صغير) — إيقاف دون رفع/حذف. المصادر محفوظة.")
         sys.exit(1)
-    log(f"✅ تم التحقق من سلامة الفيديو المدمج ({round(merged_all.stat().st_size / (1024*1024), 1)} MB).")
+    shorts_files = sorted(p for p in merged_dir.glob("merged_*.mp4") if "merged_all" not in p.name)
+    log(f"✅ تم التحقق: فيديو طويل {round(merged_all.stat().st_size / (1024*1024), 1)} MB + {len(shorts_files)} شورت.")
 
-    # 3. الرفع (merged_all فقط + جدولة)
-    publish_at, target_dz = compute_publish_at()
-    log(f"⏰ النشر المجدول: {target_dz.strftime('%Y-%m-%d %H:%M')} الجزائر ({publish_at} UTC)")
+    from webapp.youtube_service import upload_from_folder
 
+    # 3أ. رفع الفيديو الطويل (نفس اليوم 23:00)
+    long_at, long_dz = compute_publish_at()
+    log(f"⏰ الفيديو الطويل: {long_dz.strftime('%Y-%m-%d %H:%M')} الجزائر ({long_at} UTC)")
     try:
-        from webapp.youtube_service import upload_from_folder
-        result = upload_from_folder(
-            SNAP_USERNAME,
-            date_str,
-            privacy="private",          # إجباري عند الجدولة
-            upload_type="full",         # merged_all فقط
-            channel_id=CHANNEL_ID,
-            publish_at=publish_at,
-            user_id=USER_ID,
+        result_full = upload_from_folder(
+            SNAP_USERNAME, date_str,
+            privacy="private", upload_type="full", channel_id=CHANNEL_ID,
+            publish_at=long_at, user_id=USER_ID,
             progress_callback=lambda m: log(f"   📤 {m}"),
         )
     except Exception as e:
-        log(f"❌ خطأ أثناء الرفع: {e}")
+        log(f"❌ خطأ أثناء رفع الفيديو الطويل: {e}")
         sys.exit(1)
-
-    if not result.get("success"):
-        log(f"❌ فشل الرفع: {result.get('error')}")
+    if not result_full.get("success"):
+        log(f"❌ فشل رفع الفيديو الطويل: {result_full.get('error')}")
         sys.exit(1)
+    log(f"✅ رُفع الفيديو الطويل ({result_full.get('count', 0)}).")
 
-    log(f"✅ تم الرفع بنجاح: {result.get('count', 0)} فيديو.")
+    # 3ب. رفع الشورتس (اليوم التالي 8:00 صباحاً، كل 15 دقيقة واحد)
+    shorts_ok = True
+    if shorts_files:
+        shorts_at, shorts_dz = compute_shorts_publish_at(date_str)
+        last_dz = shorts_dz + timedelta(minutes=(len(shorts_files) - 1) * SHORTS_INTERVAL_MINUTES)
+        log(f"⏰ الشورتس: من {shorts_dz.strftime('%Y-%m-%d %H:%M')} إلى {last_dz.strftime('%H:%M')} الجزائر "
+            f"(كل {SHORTS_INTERVAL_MINUTES} دقيقة)")
+        try:
+            result_shorts = upload_from_folder(
+                SNAP_USERNAME, date_str,
+                privacy="private", upload_type="shorts", channel_id=CHANNEL_ID,
+                publish_at=shorts_at, user_id=USER_ID,
+                shorts_interval_minutes=SHORTS_INTERVAL_MINUTES,
+                progress_callback=lambda m: log(f"   📤 {m}"),
+            )
+        except Exception as e:
+            log(f"❌ خطأ أثناء رفع الشورتس: {e}")
+            shorts_ok = False
+        else:
+            if result_shorts.get("success"):
+                log(f"✅ رُفعت الشورتس ({result_shorts.get('shorts', 0)}).")
+            else:
+                shorts_ok = False
+                log(f"⚠️ فشل رفع بعض/كل الشورتس: {result_shorts.get('error')}")
+    else:
+        log("ℹ️ لا توجد شورتس للرفع.")
 
-    # 4. الحذف
+    # 4. الحذف — فقط إذا نجح كل شيء (وإلا نحفظ المصادر لإعادة المحاولة)
+    if not shorts_ok:
+        log("⚠️ لن أحذف المصادر لأن الشورتس لم تُرفع كاملة. الفيديو الطويل رُفع، والشورتس ستُعاد محاولتها لاحقاً (تتخطّى المرفوع).")
+        sys.exit(1)
     if DELETE_AFTER_UPLOAD:
         cleanup_account(date_str)
     else:

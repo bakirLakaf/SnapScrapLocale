@@ -671,9 +671,12 @@ def upload_from_folder(username, date_str, privacy="private", upload_type="short
                 if publish_time and privacy == "private":
                     try:
                         base_t = datetime.strptime(publish_time, "%Y-%m-%dT%H:%M:%SZ")
-                        # Use the video's index for staggering
+                        # Use the video's index for staggering.
+                        # shorts_interval_minutes (default 1) lets callers space shorts apart;
+                        # when omitted the behavior is unchanged (1 minute per index).
                         offset_match = re.search(r"merged_(\d+)", path.name)
-                        offset = int(offset_match.group(1)) if (vid_type=="short" and offset_match) else 0
+                        interval = kwargs.get("shorts_interval_minutes", 1)
+                        offset = int(offset_match.group(1)) * interval if (vid_type=="short" and offset_match) else 0
                         staggered = base_t + timedelta(minutes=offset)
                         
                         # Safety Buffer: YouTube requires publishAt to be in the future.
